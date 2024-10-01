@@ -39,6 +39,50 @@ const removeHandler = () => {
   }
 };
 
+const nestedList = [
+  {
+    id: 1,
+    children: [
+      {
+        id: 11,
+        children: [],
+      },
+      {
+        id: 12,
+        children: [
+          {
+            id: 121,
+            children: [],
+          },
+          {
+            id: 122,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 13,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: 2,
+    children: [
+      {
+        id: 21,
+        children: [],
+      },
+      {
+        id: 22,
+        children: [],
+      },
+    ],
+  },
+];
+
+items.value = [...nestedList];
+
 window.addEventListener("pointerup", pointerUpHandler);
 </script>
 
@@ -64,11 +108,11 @@ window.addEventListener("pointerup", pointerUpHandler);
     <DropContainer>
       <DragItem
         v-for="(item, index) in items"
-        :key="item"
+        :key="item.id"
         :item="item"
         :index="index"
       >
-        <p class="pointer-events-none">Item {{ item }}</p>
+        <p class="pointer-events-none">Item {{ item.id }}</p>
       </DragItem>
     </DropContainer>
 

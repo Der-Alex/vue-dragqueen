@@ -27,7 +27,8 @@ const dragExitHandler = (evt: DragEvent) => {
     @dragenter="dragEnterHandler"
     @dragleave="dragLeaveHandler"
     @dragexit="dragExitHandler"
-    @drop="dropHandler">
+    @drop="dropHandler"
+  >
     <slot />
   </div>
 </template>

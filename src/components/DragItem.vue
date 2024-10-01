@@ -4,6 +4,7 @@ import { useDragQueen } from "@/composables/useDragQueen";
 
 defineProps({
   item: {
+    type: Object as () => any,
     required: true,
   },
   index: {
@@ -19,7 +20,10 @@ const {
   dragLeaveHandler,
   dropHandler,
   pointerDownHandler,
+  setDebug,
 } = useDragQueen();
+
+setDebug();
 </script>
 <template>
   <div
@@ -34,5 +38,21 @@ const {
     @pointerdown="(evt: PointerEvent) => pointerDownHandler(evt, item)"
   >
     <slot />
+    <template v-if="item && item.children && item.children.length > 0">
+      <DragItem
+        v-for="(i, j) in item.children"
+        :key="i.id"
+        :item="i"
+        :index="j"
+      >
+        <p>item {{ i.id }}</p>
+      </DragItem>
+    </template>
   </div>
 </template>
+
+<style>
+.drag-item .drag-item {
+  margin-left: 0.5rem;
+}
+</style>

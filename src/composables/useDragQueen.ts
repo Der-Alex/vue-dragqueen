@@ -1,22 +1,23 @@
 import { ref } from "vue";
-export const useDragQueen = () => {
-  const items = ref<any[]>([]);
-  const dropItems = ref<any[]>([]);
-  const draggingItem = ref(-1);
-  const isDragging = ref(false);
-  const enteredItem = ref(-1);
-  const originalIndex = ref(-1);
-  const lastDraggedItem = ref(-1);
-  const isTouching = ref(-1);
-  const debug = ref(false);
 
+const items = ref<any[]>([]);
+const dropItems = ref<any[]>([]);
+const draggingItem = ref(-1);
+const isDragging = ref(false);
+const enteredItem = ref(-1);
+const originalIndex = ref(-1);
+const lastDraggedItem = ref(-1);
+const isTouching = ref(-1);
+const debug = ref(false);
+
+export const useDragQueen = () => {
   const setDebug = () => {
     debug.value = true;
   };
 
   const dragStartHandler = (evt: DragEvent, item: any, index: number) => {
     if (debug.value) {
-      console.log("Event DRAGSTART", evt, item);
+      console.log("Event DRAGSTART", evt, item, draggingItem.value, index);
     }
 
     isDragging.value = true;
@@ -32,11 +33,13 @@ export const useDragQueen = () => {
 
     enteredItem.value = item;
 
-    if (draggingItem.value === enteredItem.value) {
+    if (
+      JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
+    ) {
       return;
     }
 
-    if (draggingItem.value === item) {
+    if (JSON.stringify(draggingItem.value) === JSON.stringify(item)) {
       return;
     }
 
@@ -64,11 +67,6 @@ export const useDragQueen = () => {
     draggingItem.value = -1;
   };
 
-  //   const dragEndHandler = (evt: DragEvent) => {
-  //     evt.preventDefault();
-  //     console.log("Event DRAGEND", evt.type);
-  //   };
-
   const dropHandler = (evt: DragEvent, item: any) => {
     if (debug.value) {
       console.log("Event DROP", evt, item);
@@ -93,7 +91,7 @@ export const useDragQueen = () => {
     isTouching.value = item;
 
     if (debug.value) {
-      console.log("touchy", isTouching.value);
+      console.log("touchy", isTouching.value, draggingItem.value);
     }
   };
 
@@ -110,7 +108,13 @@ export const useDragQueen = () => {
   };
 
   const reorder = () => {
-    if (draggingItem.value === enteredItem.value) {
+    if (debug.value) {
+      console.log("reordering");
+    }
+
+    if (
+      JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
+    ) {
       return;
     }
 
@@ -123,11 +127,23 @@ export const useDragQueen = () => {
     }
 
     items.value.splice(indexToPlace, 0, draggingItem.value);
+
+    if (debug.value) {
+      console.log("reordered", items);
+    }
   };
   const swap = (index1: number, index2: number) => {
+    if (debug.value) {
+      console.log(`swapping ${index1} and ${index2}`);
+    }
+
     const temp = items.value[index1];
     items.value[index1] = items.value[index2];
     items.value[index2] = temp;
+
+    if (debug.value) {
+      console.log(items.value);
+    }
   };
 
   return {
