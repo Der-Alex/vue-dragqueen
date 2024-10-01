@@ -1,73 +1,11 @@
 <script setup lang="ts">
 import DragItem from "@/components/DragItem.vue";
 import DropContainer from "@/components/DropContainer.vue";
-import { ref } from "vue";
+import { useDragQueen } from "./composables/useDragQueen";
 
-const items = ref<number[]>([]);
-const dropItems = ref<number[]>([]);
-const draggingItem = ref(-1);
-const isDragging = ref(false);
-const enteredItem = ref(-1);
-const originalIndex = ref(-1);
-const lastDraggedItem = ref(-1);
-const isTouching = ref(-1);
-
-const dragStartHandler = (evt: DragEvent, item: number, index: number) => {
-  console.log("Event DRAGSTART", evt, item);
-  isDragging.value = true;
-  originalIndex.value = index;
-};
-const dragEnterHandler = (evt: DragEvent, item: number, index: number) => {
-  evt.preventDefault();
-  console.log("Event DRAGENTER", evt, item);
-  enteredItem.value = item;
-
-  if (draggingItem.value === enteredItem.value) {
-    return;
-  }
-  if (draggingItem.value === item) {
-    return;
-  }
-  if (originalIndex.value === index) {
-    return;
-  }
-
-  swap(originalIndex.value, index);
-  originalIndex.value = index;
-};
-const dragLeaveHandler = (evt: DragEvent, item: number) => {
-  console.log("Event DRAGLEAVE", evt, item);
-};
-const dragEndHandler = (evt: DragEvent) => {
-  console.log("Event DRAGEND", evt);
-  isDragging.value = false;
-  lastDraggedItem.value = draggingItem.value;
-  draggingItem.value = -1;
-};
-const dropHandler = (evt: DragEvent, item: number) => {
-  console.log("Event DROP", evt, item);
-  reorder();
-  draggingItem.value = -1;
-  enteredItem.value = -1;
-};
-
-const reorder = () => {
-  if (draggingItem.value === enteredItem.value) {
-    return;
-  }
-  const indexToMove = items.value.indexOf(draggingItem.value);
-  let indexToPlace = items.value.indexOf(enteredItem.value);
-  items.value.splice(indexToMove, 1);
-  if (indexToPlace > items.value.length) {
-    indexToPlace--;
-  }
-  items.value.splice(indexToPlace, 0, draggingItem.value);
-};
-const swap = (index1: number, index2: number) => {
-  const temp = items.value[index1];
-  items.value[index1] = items.value[index2];
-  items.value[index2] = temp;
-};
+const { items, pointerUpHandler, draggingItem, enteredItem, setDebug } =
+  useDragQueen();
+setDebug();
 const addHandler = () => {
   let originalOrder = [...items.value];
   // Sortiere das items.valueay, um die größte vorhandene Zahl leicht zu finden
@@ -81,7 +19,7 @@ const addHandler = () => {
       // Überspringe Zahlen, die kleiner als die gesuchte sind
       continue;
     } else if (num === nextPositive) {
-      // Wenn die Zahl im items.valueay der gesuchten entspricht, erhöhe nextPositive
+      // Wenn die Zahl im items.value der gesuchten entspricht, erhöhe nextPositive
       nextPositive++;
     } else {
       // Wenn wir eine Lücke finden, können wir abbrechen, da nextPositive die gesuchte Zahl ist
@@ -101,27 +39,40 @@ const removeHandler = () => {
   }
 };
 
-const dropHandlerDropContainer = (evt: DragEvent) => {
-  evt.preventDefault();
-  dropItems.value.push(lastDraggedItem.value);
-};
-const pointerDownHandler = (evt: PointerEvent, item: number) => {
-  console.log("Event POINTERDOWN", evt.type, isTouching.value);
-  draggingItem.value = item;
-  isTouching.value = item;
-  console.log("touchy", isTouching.value);
-};
-const pointerUpHandler = (evt: PointerEvent) => {
-  console.log("Event POINTERUP", evt.type, isTouching.value);
-  isTouching.value = -1;
-  console.log("touchy", isTouching.value);
-};
-
 window.addEventListener("pointerup", pointerUpHandler);
 </script>
 
 <template>
   <div class="grid grid-cols-2 w-full h-svh">
+    <div class="buttons">
+      <button
+        class="w-24 border border-gray-500 bg-gray-300"
+        @click="addHandler"
+      >
+        Add Item</button
+      ><button
+        class="w-32 border border-gray-500 bg-gray-300"
+        @click="removeHandler"
+      >
+        Remove Item
+      </button>
+    </div>
+    <div>
+      <p>Dragging Item: {{ draggingItem }}</p>
+      <p>Entered Item: {{ enteredItem }}</p>
+    </div>
+    <DropContainer>
+      <DragItem
+        v-for="(item, index) in items"
+        :key="item"
+        :item="item"
+        :index="index"
+      >
+        <p class="pointer-events-none">Item {{ item }}</p>
+      </DragItem>
+    </DropContainer>
+
+    <!--
     <DropContainer
       class="drag-items w-full h-full bg-gray-400 flex flex-col gap-2 p-4">
       <div class="buttons">
@@ -170,7 +121,7 @@ window.addEventListener("pointerup", pointerUpHandler);
         <p>{{ item }}</p></DragItem
       >
     </DropContainer>
-  </div>
+  --></div>
 </template>
 <style scoped>
 /* 1. declare transition */
