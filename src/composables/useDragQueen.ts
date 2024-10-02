@@ -10,6 +10,59 @@ const lastDraggedItem = ref(-1);
 const isTouching = ref(-1);
 const debug = ref(false);
 
+function moveItem(tree, itemId, targetId, isChild = false) {
+  let itemToMove = null;
+  let parentOfItem = null;
+
+  // Funktion zum Entfernen eines Items und seines Elternteils aus dem Baum
+  function removeItem(node, parent = null) {
+    for (let i = 0; i < node.length; i++) {
+      if (node[i].id === itemId) {
+        itemToMove = node.splice(i, 1)[0];
+        parentOfItem = parent;
+        return true;
+      }
+      if (node[i].children && removeItem(node[i].children, node[i])) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Funktion zum Einfügen des Items an der gewünschten Stelle
+  function insertItem(node) {
+    for (let i = 0; i < node.length; i++) {
+      if (node[i].id === targetId) {
+        if (isChild) {
+          node[i].children.push(itemToMove); // Als Kind hinzufügen
+        } else {
+          node.splice(i, 0, itemToMove); // Als Geschwister hinzufügen
+        }
+        return true;
+      }
+      if (node[i].children && insertItem(node[i].children)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Entfernen des Items
+  if (!removeItem(tree)) {
+    console.error("Item not found");
+    return;
+  }
+
+  // Einfügen des Items
+  if (!insertItem(tree)) {
+    console.error("Target not found");
+    return;
+  }
+
+  // Rückgabe der veränderten Baumstruktur
+  return tree;
+}
+
 export const useDragQueen = () => {
   const setDebug = () => {
     debug.value = true;
