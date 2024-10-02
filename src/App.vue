@@ -102,8 +102,8 @@ window.addEventListener("pointerup", pointerUpHandler);
       </button>
     </div>
     <div>
-      <p>Dragging Item: {{ draggingItem }}</p>
-      <p>Entered Item: {{ enteredItem }}</p>
+      <p>Dragging Item: {{ draggingItem?.id ?? "-" }}</p>
+      <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
     </div>
     <DropContainer>
       <DragItem

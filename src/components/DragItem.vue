@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { defineProps } from "vue";
+import { defineProps, ref } from "vue";
 import { useDragQueen } from "@/composables/useDragQueen";
+
+interface Item {
+  id: number;
+  children: Item[];
+}
 
 defineProps({
   item: {
@@ -13,6 +18,8 @@ defineProps({
   },
 });
 
+const isDraggable = ref(false);
+
 const {
   dragStartHandler,
   dragEndHandler,
@@ -24,18 +31,29 @@ const {
 } = useDragQueen();
 
 setDebug();
+
+const onPointerDown = (evt: PointerEvent, item: Item) => {
+  evt.stopPropagation();
+  isDraggable.value = true;
+  pointerDownHandler(evt, item);
+};
+
+const onPointerUp = (evt: PointerEvent) => {
+  isDraggable.value = false;
+};
 </script>
 <template>
   <div
     class="drag-item"
-    draggable="true"
+    :draggable="isDraggable"
     @dragstart="(evt: DragEvent) => dragStartHandler(evt, item, index)"
     @dragenter="(evt: DragEvent) => dragEnterHandler(evt, item, index)"
     @dragover.stop
     @dragleave="(evt: DragEvent) => dragLeaveHandler(evt, item)"
     @dragend="dragEndHandler"
     @drop="(evt: DragEvent) => dropHandler(evt, item)"
-    @pointerdown="(evt: PointerEvent) => pointerDownHandler(evt, item)"
+    @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
+    @pointerup="onPointerUp"
   >
     <slot />
     <template v-if="item && item.children && item.children.length > 0">

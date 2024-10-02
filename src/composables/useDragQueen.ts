@@ -1,66 +1,91 @@
 import { ref } from "vue";
 
-const items = ref<any[]>([]);
-const dropItems = ref<any[]>([]);
-const draggingItem = ref(-1);
+interface Item {
+  id: number;
+  children: Item[];
+}
+
+const items = ref<Item[]>([]);
+const dropItems = ref<Item[]>([]);
+const draggingItem = ref<Item | null>(null);
+const originalId = ref(-1);
 const isDragging = ref(false);
-const enteredItem = ref(-1);
+const enteredItem = ref<Item | null>(null);
 const originalIndex = ref(-1);
-const lastDraggedItem = ref(-1);
-const isTouching = ref(-1);
+const lastDraggedItem = ref<Item | null>(null);
+const isTouching = ref<Item | null>(null);
 const debug = ref(false);
 
-function moveItem(tree, itemId, targetId, isChild = false) {
-  let itemToMove = null;
-  let parentOfItem = null;
-
-  // Funktion zum Entfernen eines Items und seines Elternteils aus dem Baum
-  function removeItem(node, parent = null) {
-    for (let i = 0; i < node.length; i++) {
-      if (node[i].id === itemId) {
-        itemToMove = node.splice(i, 1)[0];
-        parentOfItem = parent;
-        return true;
-      }
-      if (node[i].children && removeItem(node[i].children, node[i])) {
-        return true;
+function findItemById(tree: Item[], id: number): Item | null {
+  for (const item of tree) {
+    if (item.id === id) {
+      return item;
+    }
+    if (item.children.length > 0) {
+      const found = findItemById(item.children, id);
+      if (found) {
+        return found;
       }
     }
-    return false;
   }
+  return null;
+}
 
-  // Funktion zum Einfügen des Items an der gewünschten Stelle
-  function insertItem(node) {
-    for (let i = 0; i < node.length; i++) {
-      if (node[i].id === targetId) {
-        if (isChild) {
-          node[i].children.push(itemToMove); // Als Kind hinzufügen
-        } else {
-          node.splice(i, 0, itemToMove); // Als Geschwister hinzufügen
-        }
-        return true;
+function insertItem(
+  tree: Item[],
+  targetId: number,
+  newItem: Item,
+  position: "before" | "after"
+): boolean {
+  for (let i = 0; i < tree.length; i++) {
+    const item = tree[i];
+
+    if (item.id === targetId) {
+      if (position === "before") {
+        tree.splice(i, 0, newItem); // Insert before the target item
+      } else if (position === "after") {
+        tree.splice(i + 1, 0, newItem); // Insert after the target item
       }
-      if (node[i].children && insertItem(node[i].children)) {
-        return true;
+      return true; // Item inserted
+    }
+
+    // Recursively search in children
+    if (item.children.length > 0) {
+      const insertedInChildren = insertItem(
+        item.children,
+        targetId,
+        newItem,
+        position
+      );
+      if (insertedInChildren) {
+        return true; // Item inserted in children
       }
     }
-    return false;
   }
 
-  // Entfernen des Items
-  if (!removeItem(tree)) {
-    console.error("Item not found");
-    return;
+  return false; // Target item not found
+}
+
+function removeItemById(tree: Item[], targetId: number): boolean {
+  for (let i = 0; i < tree.length; i++) {
+    const item = tree[i];
+
+    // Prüfen, ob das aktuelle Item die Ziel-ID hat
+    if (item.id === targetId) {
+      tree.splice(i, 1); // Entfernt das Item aus dem Array
+      return true; // Item wurde entfernt
+    }
+
+    // Rekursiv in den Kindern weitersuchen
+    if (item.children.length > 0) {
+      const removedFromChildren = removeItemById(item.children, targetId);
+      if (removedFromChildren) {
+        return true; // Item wurde in den Kindern entfernt
+      }
+    }
   }
 
-  // Einfügen des Items
-  if (!insertItem(tree)) {
-    console.error("Target not found");
-    return;
-  }
-
-  // Rückgabe der veränderten Baumstruktur
-  return tree;
+  return false; // Ziel-Item nicht gefunden
 }
 
 export const useDragQueen = () => {
@@ -70,54 +95,70 @@ export const useDragQueen = () => {
 
   const dragStartHandler = (evt: DragEvent, item: any, index: number) => {
     if (debug.value) {
-      console.log("Event DRAGSTART", evt, item, draggingItem.value, index);
+      console.log("Event DRAGSTART", draggingItem.value?.id);
     }
 
     isDragging.value = true;
     originalIndex.value = index;
   };
 
-  const dragEnterHandler = (evt: DragEvent, item: any, index: number) => {
-    evt.preventDefault();
+  const dragEnterHandler = (evt: DragEvent, item: Item, index: number) => {
+    evt.stopPropagation();
 
     if (debug.value) {
-      console.log("Event DRAGENTER", evt, item);
+      console.log("Event DRAGENTER", item.id, index);
     }
 
     enteredItem.value = item;
 
-    if (
-      JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
-    ) {
+    if (draggingItem.value?.id === enteredItem.value?.id) {
       return;
     }
 
-    if (JSON.stringify(draggingItem.value) === JSON.stringify(item)) {
+    if (draggingItem.value?.id === item.id) {
       return;
     }
 
     if (originalIndex.value === index) {
       return;
     }
-
-    swap(originalIndex.value, index);
-    originalIndex.value = index;
   };
 
   const dragLeaveHandler = (evt: DragEvent, item: any) => {
+    evt.stopPropagation();
     if (debug.value) {
-      console.log("Event DRAGLEAVE", evt, item);
+      console.log("Event DRAGLEAVE", evt, item.id);
     }
   };
 
   const dragEndHandler = (evt: DragEvent) => {
+    evt.stopPropagation();
     if (debug.value) {
-      console.log("Event DRAGEND", evt);
+      console.log(
+        "Event DRAGEND",
+        draggingItem.value?.id,
+        enteredItem.value?.id,
+        lastDraggedItem.value?.id
+      );
+    }
+    if (draggingItem.value?.id === enteredItem.value?.id) {
+      return;
+    }
+    if (draggingItem.value && enteredItem.value) {
+      console.log("insert before", draggingItem.value.id, enteredItem.value.id);
+      insertItem(
+        items.value,
+        enteredItem.value.id,
+        draggingItem.value,
+        "before"
+      );
+      removeItemById(items.value, originalId.value);
+      draggingItem.value.id = originalId.value;
     }
 
     isDragging.value = false;
     lastDraggedItem.value = draggingItem.value;
-    draggingItem.value = -1;
+    draggingItem.value = null;
   };
 
   const dropHandler = (evt: DragEvent, item: any) => {
@@ -125,14 +166,16 @@ export const useDragQueen = () => {
       console.log("Event DROP", evt, item);
     }
 
-    reorder();
-    draggingItem.value = -1;
-    enteredItem.value = -1;
+    //reorder();
+    draggingItem.value = null;
+    enteredItem.value = null;
   };
 
   const dropHandlerDropContainer = (evt: DragEvent) => {
     evt.preventDefault();
-    dropItems.value.push(lastDraggedItem.value);
+    if (lastDraggedItem.value) {
+      dropItems.value.push(lastDraggedItem.value);
+    }
   };
 
   const pointerDownHandler = (evt: PointerEvent, item: any) => {
@@ -140,8 +183,13 @@ export const useDragQueen = () => {
       console.log("Event POINTERDOWN", evt.type, isTouching.value);
     }
 
-    draggingItem.value = item;
+    originalId.value = item.id;
+    draggingItem.value = { ...item };
     isTouching.value = item;
+
+    if (draggingItem.value) {
+      draggingItem.value.id += 99999999;
+    }
 
     if (debug.value) {
       console.log("touchy", isTouching.value, draggingItem.value);
@@ -153,51 +201,51 @@ export const useDragQueen = () => {
       console.log("Event POINTERUP", evt.type, isTouching.value);
     }
 
-    isTouching.value = -1;
+    isTouching.value = null;
 
     if (debug.value) {
       console.log("touchy", isTouching.value);
     }
   };
 
-  const reorder = () => {
-    if (debug.value) {
-      console.log("reordering");
-    }
+  // const reorder = () => {
+  //   if (debug.value) {
+  //     console.log("reordering");
+  //   }
 
-    if (
-      JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
-    ) {
-      return;
-    }
+  //   if (
+  //     JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
+  //   ) {
+  //     return;
+  //   }
 
-    const indexToMove = items.value.indexOf(draggingItem.value);
-    let indexToPlace = items.value.indexOf(enteredItem.value);
-    items.value.splice(indexToMove, 1);
+  //   const indexToMove = items.value.indexOf(draggingItem.value);
+  //   let indexToPlace = items.value.indexOf(enteredItem.value);
+  //   items.value.splice(indexToMove, 1);
 
-    if (indexToPlace > items.value.length) {
-      indexToPlace--;
-    }
+  //   if (indexToPlace > items.value.length) {
+  //     indexToPlace--;
+  //   }
 
-    items.value.splice(indexToPlace, 0, draggingItem.value);
+  //   items.value.splice(indexToPlace, 0, draggingItem.value);
 
-    if (debug.value) {
-      console.log("reordered", items);
-    }
-  };
-  const swap = (index1: number, index2: number) => {
-    if (debug.value) {
-      console.log(`swapping ${index1} and ${index2}`);
-    }
+  //   if (debug.value) {
+  //     console.log("reordered", items);
+  //   }
+  // };
+  // const swap = (index1: number, index2: number) => {
+  //   if (debug.value) {
+  //     console.log(`swapping ${index1} and ${index2}`);
+  //   }
 
-    const temp = items.value[index1];
-    items.value[index1] = items.value[index2];
-    items.value[index2] = temp;
+  //   const temp = items.value[index1];
+  //   items.value[index1] = items.value[index2];
+  //   items.value[index2] = temp;
 
-    if (debug.value) {
-      console.log(items.value);
-    }
-  };
+  //   if (debug.value) {
+  //     console.log(items.value);
+  //   }
+  // };
 
   return {
     items,
@@ -216,8 +264,6 @@ export const useDragQueen = () => {
     dropHandlerDropContainer,
     pointerDownHandler,
     pointerUpHandler,
-    reorder,
-    swap,
     setDebug,
   };
 };
