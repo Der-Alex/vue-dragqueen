@@ -21,6 +21,7 @@ defineProps({
 const isDraggable = ref(false);
 
 const {
+  dragHandler,
   dragStartHandler,
   dragEndHandler,
   dragEnterHandler,

@@ -15,6 +15,9 @@ const originalIndex = ref(-1);
 const lastDraggedItem = ref<Item | null>(null);
 const isTouching = ref<Item | null>(null);
 const debug = ref(false);
+const draggingElement = ref<HTMLElement>();
+const lastEvent = ref<"DRAGENTER" | "DRAGLEAVE" | "">("");
+const lastPosition = ref<"above" | "below" | "into" | "">("");
 
 function findItemById(tree: Item[], id: number): Item | null {
   for (const item of tree) {
@@ -35,16 +38,18 @@ function insertItem(
   tree: Item[],
   targetId: number,
   newItem: Item,
-  position: "before" | "after"
+  position: "above" | "below" | "into"
 ): boolean {
   for (let i = 0; i < tree.length; i++) {
     const item = tree[i];
 
     if (item.id === targetId) {
-      if (position === "before") {
+      if (position === "above") {
         tree.splice(i, 0, newItem); // Insert before the target item
-      } else if (position === "after") {
+      } else if (position === "below") {
         tree.splice(i + 1, 0, newItem); // Insert after the target item
+      } else if (position === "into") {
+        tree[i].children.push(newItem);
       }
       return true; // Item inserted
     }
@@ -88,12 +93,42 @@ function removeItemById(tree: Item[], targetId: number): boolean {
   return false; // Ziel-Item nicht gefunden
 }
 
+function getDragLeavePosition(
+  draggingElement: HTMLElement,
+  enteredElement: HTMLElement,
+  event: DragEvent
+): "above" | "below" | "into" {
+  const enteredRect = enteredElement.getBoundingClientRect();
+  const draggingRect = draggingElement.getBoundingClientRect();
+
+  // Verlassen auf Basis der Y-Positionen prüfen
+  const leavePointY = event.clientY;
+
+  // Bestimmen der Mittellinie des enteredElement
+  const middleY = enteredRect.top + enteredRect.height / 2;
+
+  // Prüfen ob das draggingElement oberhalb oder unterhalb verlassen hat
+  if (leavePointY < middleY - enteredRect.height / 4) {
+    return "above";
+  } else if (leavePointY > middleY + enteredRect.height / 4) {
+    return "below";
+  } else {
+    return "into";
+  }
+}
+
 export const useDragQueen = () => {
   const setDebug = () => {
     debug.value = true;
   };
 
+  const dragHandler = (evt: DragEvent) => {
+    evt.stopPropagation();
+    console.log(evt);
+  };
+
   const dragStartHandler = (evt: DragEvent, item: any, index: number) => {
+    evt.stopPropagation();
     if (debug.value) {
       console.log("Event DRAGSTART", draggingItem.value?.id);
     }
@@ -104,6 +139,8 @@ export const useDragQueen = () => {
 
   const dragEnterHandler = (evt: DragEvent, item: Item, index: number) => {
     evt.stopPropagation();
+
+    lastEvent.value = "DRAGENTER";
 
     if (debug.value) {
       console.log("Event DRAGENTER", item.id, index);
@@ -122,13 +159,27 @@ export const useDragQueen = () => {
     if (originalIndex.value === index) {
       return;
     }
+
+    lastPosition.value = "into";
   };
 
-  const dragLeaveHandler = (evt: DragEvent, item: any) => {
+  const dragLeaveHandler = (evt: any, item: any) => {
     evt.stopPropagation();
+    lastEvent.value = "DRAGLEAVE";
     if (debug.value) {
       console.log("Event DRAGLEAVE", evt, item.id);
     }
+
+    if (evt.target.nodeName === "#text") {
+      lastPosition.value = "into";
+      return;
+    }
+
+    lastPosition.value = getDragLeavePosition(
+      draggingElement.value as HTMLElement,
+      evt.target as HTMLElement,
+      evt
+    );
   };
 
   const dragEndHandler = (evt: DragEvent) => {
@@ -141,16 +192,35 @@ export const useDragQueen = () => {
         lastDraggedItem.value?.id
       );
     }
-    if (draggingItem.value?.id === enteredItem.value?.id) {
+
+    if (
+      draggingItem.value?.id === enteredItem.value?.id ||
+      (draggingItem.value?.id as number) - 99999999 === enteredItem.value?.id
+    ) {
       return;
     }
+
+    if (
+      draggingItem.value?.children &&
+      draggingItem.value.children.length > 0 &&
+      enteredItem.value?.id
+    ) {
+      const isEnteredItemChild = findItemById(
+        draggingItem.value.children,
+        enteredItem.value.id
+      );
+      if (isEnteredItemChild) {
+        return;
+      }
+    }
+
     if (draggingItem.value && enteredItem.value) {
       console.log("insert before", draggingItem.value.id, enteredItem.value.id);
       insertItem(
         items.value,
         enteredItem.value.id,
         draggingItem.value,
-        "before"
+        lastPosition.value as "above" | "below" | "into"
       );
       removeItemById(items.value, originalId.value);
       draggingItem.value.id = originalId.value;
@@ -182,6 +252,8 @@ export const useDragQueen = () => {
     if (debug.value) {
       console.log("Event POINTERDOWN", evt.type, isTouching.value);
     }
+
+    draggingElement.value = evt.target as HTMLElement;
 
     originalId.value = item.id;
     draggingItem.value = { ...item };
@@ -256,6 +328,8 @@ export const useDragQueen = () => {
     lastDraggedItem,
     originalIndex,
     isTouching,
+    dragHandler,
+
     dragEndHandler,
     dragEnterHandler,
     dragLeaveHandler,
