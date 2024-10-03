@@ -1,3 +1,3 @@
-# Vue Draggr - A Vue drag & drop component
+# Vue Dragqueen - The queen of Vue drag & drop components!
 
-This is a simple drag & drop component for vue 3
+Documentation will follow!
