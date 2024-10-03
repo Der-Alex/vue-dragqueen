@@ -9,18 +9,23 @@
 import { ref } from "vue";
 
 /**
+ * Represents the type of an item's ID. It is either a string or a number.
+ */
+type ID = string | number;
+
+/**
  * Represents an item in the tree structure.
  *
  * @typedef {Object} Item
- * @property {number} id - The unique identifier of the item.
+ * @property {ID} id - The unique identifier of the item.
  * @property {Item[]} children - The child items of this item.
  * @property {any} [key] - Additional properties of the item.
  */
-interface Item {
-  id: number;
+export type Item = {
+  id: ID;
   children: Item[];
   [key: string]: any;
-}
+};
 
 /**
  * @typedef {"DRAGENTER" | "DRAGLEAVE"} EventType - Represents the type of drag event.
@@ -35,19 +40,12 @@ type EventType = "DRAGENTER" | "DRAGLEAVE";
 type DropPosition = "ABOVE" | "BELOW" | "INTO";
 
 const items = ref<Item[]>([]);
-const tempItems = ref<Item[]>([]);
-const dropItems = ref<Item[]>([]);
 const draggingItem = ref<Item | null>(null);
-const originalId = ref(-1);
-const isDragging = ref(false);
 const enteredItem = ref<Item | null>(null);
-const originalIndex = ref(-1);
 const lastDraggedItem = ref<Item | null>(null);
-const isTouching = ref<Item | null>(null);
 const debug = ref(false);
 const lastEvent = ref<EventType>();
 const dropPosition = ref<DropPosition>();
-const TEMP_ID = 99999999;
 
 /**
  * Checks if the current dragging item is the same as the target item
@@ -62,37 +60,23 @@ function isSameItem(target: Item): boolean {
 
   return (
     draggingItem.value.id === enteredItem.value?.id ||
-    draggingItem.value.id - TEMP_ID === enteredItem.value?.id ||
-    draggingItem.value.id === target.id ||
-    draggingItem.value.id - TEMP_ID === target.id
+    draggingItem.value.id === target.id
   );
 }
 
 /**
- * Utility function to deep clone an array of items.
- *
- * @param {Item[]} source - The source array to clone.
- * @returns {Item[]} - A deep clone of the source array.
- */
-function deepClone(source: Item[]): Item[] {
-  return JSON.parse(JSON.stringify(source));
-}
-
-/**
  * Updates the temporary tree structure to reflect the current drag state.
- * The tempItems array will contain the preview of the tree as it would look
+ * The items array will contain the preview of the tree as it would look
  * if the dragged item were dropped at the current position.
  */
-function updateTempTree() {
+function updateTree() {
   if (!draggingItem.value || !enteredItem.value || !dropPosition.value) {
-    tempItems.value = deepClone(items.value);
     return;
   }
 
-  tempItems.value = deepClone(items.value);
-  removeItemById(tempItems.value, draggingItem.value.id);
+  removeItemById(items.value, draggingItem.value.id);
   insertItem(
-    tempItems.value,
+    items.value,
     enteredItem.value.id,
     draggingItem.value,
     dropPosition.value
@@ -107,7 +91,7 @@ function updateTempTree() {
  * @param {number} id - The ID of the item to search for.
  * @returns {Item | null} The item if found, otherwise null.
  */
-function findItemById(tree: Item[], id: number): Item | null {
+function findItemById(tree: Item[], id: ID): Item | null {
   for (const item of tree) {
     if (item.id === id) {
       return item;
@@ -137,7 +121,7 @@ function findItemById(tree: Item[], id: number): Item | null {
  */
 function insertItem(
   tree: Item[],
-  targetId: number,
+  targetId: ID,
   newItem: Item,
   position: "ABOVE" | "BELOW" | "INTO"
 ): boolean {
@@ -180,7 +164,7 @@ function insertItem(
  * @param {number} targetId - The ID of the item to remove.
  * @returns {boolean} True if the item was removed, false otherwise.
  */
-function removeItemById(tree: Item[], targetId: number): boolean {
+function removeItemById(tree: Item[], targetId: ID): boolean {
   for (let i = 0; i < tree.length; i++) {
     const item = tree[i];
 
@@ -245,14 +229,9 @@ function getDragLeavePosition(
  * @returns {Object} An object containing reactive properties and methods
  *                  for managing drag-and-drop interactions:
  *                  - {Ref<Item[]>} items - The current list of items.
- *                  - {Ref<Item[]>} dropItems - The list of items that have been dropped.
  *                  - {Ref<Item|null>} draggingItem - The item currently being dragged.
- *                  - {Ref<boolean>} isDragging - A boolean indicating if an item is being dragged.
  *                  - {Ref<Item|null>} enteredItem - The item currently being hovered over.
  *                  - {Ref<Item|null>} lastDraggedItem - The last item that was dragged.
- *                  - {Ref<number|null>} originalIndex - The original index of the item.
- *                  - {Ref<Item|null>} isTouching - The item being touched.
- *                  - {Ref<Item[]>} tempItems - A temporary representation of the items during dragging.
  *                  - {Function} dragHandler - Handles the drag event.
  *                  - {Function} dragEndHandler - Handles the end of the drag event.
  *                  - {Function} dragEnterHandler - Handles when an item is dragged into a drop zone.
@@ -288,10 +267,9 @@ export const useDragQueen = () => {
       console.log("Event DRAGSTART", draggingItem.value?.id);
     }
 
-    isDragging.value = true;
     draggingItem.value = item;
     evt.dataTransfer?.setData("text/plain", item.id.toString());
-    updateTempTree();
+    updateTree();
   };
 
   /**
@@ -327,7 +305,7 @@ export const useDragQueen = () => {
     enteredItem.value = item;
 
     dropPosition.value = "INTO";
-    updateTempTree();
+    updateTree();
   };
 
   /**
@@ -364,7 +342,7 @@ export const useDragQueen = () => {
       getDragLeavePosition(evt.target as HTMLElement, evt)
     ) {
       dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
-      updateTempTree();
+      updateTree();
     }
   };
 
@@ -405,7 +383,7 @@ export const useDragQueen = () => {
     }
 
     dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
-    updateTempTree();
+    updateTree();
   };
 
   /**
@@ -433,10 +411,7 @@ export const useDragQueen = () => {
       return;
     }
 
-    if (
-      draggingItem.value.id === enteredItem.value.id ||
-      (draggingItem.value.id as number) - TEMP_ID === enteredItem.value.id
-    ) {
+    if (draggingItem.value.id === enteredItem.value.id) {
       return;
     }
 
@@ -454,14 +429,10 @@ export const useDragQueen = () => {
       }
     }
 
-    items.value = deepClone(tempItems.value);
-
     lastDraggedItem.value = draggingItem.value;
-    isDragging.value = false;
     draggingItem.value = null;
     enteredItem.value = null;
     dropPosition.value = undefined;
-    tempItems.value = deepClone(items.value);
   };
 
   /**
@@ -483,21 +454,6 @@ export const useDragQueen = () => {
   };
 
   /**
-   * Handles the drop event specifically for the drop container. This function
-   * prevents the default browser behavior for the drop event and adds the
-   * last dragged item to the dropItems array if it exists.
-   *
-   * @param {DragEvent} evt - The drag event object containing details about the
-   *                          drop operation.
-   */
-  const dropHandlerDropContainer = (evt: DragEvent) => {
-    evt.preventDefault();
-    if (lastDraggedItem.value) {
-      dropItems.value.push(lastDraggedItem.value);
-    }
-  };
-
-  /**
    * Handles the pointer down event, initializing the dragging item and
    * updating relevant state variables. This function sets the original ID
    * of the item being dragged and modifies its ID for the dragging operation.
@@ -509,61 +465,24 @@ export const useDragQueen = () => {
    */
   const pointerDownHandler = (evt: PointerEvent, item: any) => {
     if (debug.value) {
-      console.log("Event POINTERDOWN", evt.type, isTouching.value);
+      console.log("Event POINTERDOWN", evt.type);
     }
 
-    originalId.value = item.id;
     draggingItem.value = { ...item };
-    isTouching.value = item;
-
-    if (draggingItem.value) {
-      draggingItem.value.id += TEMP_ID;
-    }
-
-    if (debug.value) {
-      console.log("touchy", isTouching.value, draggingItem.value);
-    }
-  };
-
-  /**
-   * Handles the pointer up event, resetting the state of the dragging
-   * item and clearing any references to the currently touched item.
-   * This function logs the event details if debugging is enabled.
-   *
-   * @param {PointerEvent} evt - The pointer event object containing details
-   *                             about the pointer action.
-   */
-  const pointerUpHandler = (evt: PointerEvent) => {
-    if (debug.value) {
-      console.log("Event POINTERUP", evt.type, isTouching.value);
-    }
-
-    isTouching.value = null;
-
-    if (debug.value) {
-      console.log("touchy", isTouching.value);
-    }
   };
 
   return {
     items,
-    dropItems,
     draggingItem,
-    isDragging,
     enteredItem,
     lastDraggedItem,
-    originalIndex,
-    isTouching,
-    tempItems,
     dragEndHandler,
     dragEnterHandler,
+    dragOverHandler,
     dragLeaveHandler,
     dragStartHandler,
     dropHandler,
-    dropHandlerDropContainer,
     pointerDownHandler,
-    pointerUpHandler,
     setDebug,
-    dragOverHandler,
   };
 };

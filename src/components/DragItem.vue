@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import { defineProps, ref, defineEmits } from "vue";
-import { useDragQueen } from "@/composables/useDragQueen";
-
-interface Item {
-  id: number;
-  children: Item[];
-}
-
-const myitem = ref(null);
+import { defineProps, ref } from "vue";
+import { useDragQueen, type Item } from "@/composables/useDragQueen";
 
 defineProps({
   item: {
-    type: Object as () => any,
+    type: Object as () => Item,
     required: true,
   },
   index: {
@@ -20,7 +13,9 @@ defineProps({
   },
 });
 
-const emits = defineEmits(["isDragging"]);
+defineSlots<{
+  default(props: { item: Item; index: number }): any;
+}>();
 
 const isDraggable = ref(false);
 
@@ -40,13 +35,11 @@ setDebug();
 const onPointerDown = (evt: PointerEvent, item: Item) => {
   evt.stopPropagation();
   isDraggable.value = true;
-  emits("isDragging", true);
   pointerDownHandler(evt, item);
 };
 
 const onPointerUp = () => {
   isDraggable.value = false;
-  emits("isDragging", false);
 };
 </script>
 <template>
@@ -61,9 +54,8 @@ const onPointerUp = () => {
     @drop="(evt: DragEvent) => dropHandler(evt, item)"
     @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
     @pointerup="onPointerUp"
-    ref="myitem"
   >
-    <slot />
+    <slot :item="item" :index="index" />
     <template v-if="item && item.children && item.children.length > 0">
       <DragItem
         v-for="(i, j) in item.children"
@@ -71,7 +63,9 @@ const onPointerUp = () => {
         :item="i"
         :index="j"
       >
-        <p class="pointer-events-none">item {{ i.id }}</p>
+        <template v-slot="{ item: i, index: j }">
+          <slot :item="i" :index="j" />
+        </template>
       </DragItem>
     </template>
   </div>
