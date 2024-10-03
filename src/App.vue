@@ -59,16 +59,18 @@ items.value = [...nestedList];
         <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
       </div>
       <DropContainer>
-        <DragItem
-          v-for="(item, index) in items"
-          :key="item.id"
-          :item="item"
-          :index="index"
-        >
-          <template v-slot="{ item, index }">
-            <p class="pointer-events-none">Item {{ item.id }}</p>
-          </template>
-        </DragItem>
+        <TransitionGroup name="list" mode="in-out">
+          <DragItem
+            v-for="(item, index) in items"
+            :key="item.id"
+            :item="item"
+            :index="index"
+          >
+            <template v-slot="{ item, index }">
+              <p>Item {{ item.id }}</p>
+            </template>
+          </DragItem>
+        </TransitionGroup>
       </DropContainer>
     </div>
 
@@ -84,18 +86,11 @@ items.value = [...nestedList];
 .list-move, /* apply transition to moving elements */
 .list-enter-active,
 .list-leave-active {
-  transition: all 0.5s ease;
+  transition: opacity 0.25s ease-out;
 }
 
 .list-enter-from,
 .list-leave-to {
   opacity: 0;
-  transform: translateX(4px);
-}
-
-/* ensure leaving items are taken out of layout flow so that moving
-   animations can be calculated correctly. */
-.list-leave-active {
-  position: absolute;
 }
 </style>

@@ -18,7 +18,7 @@ const dragExitHandler = (evt: DragEvent) => {
 
 <template>
   <div
-    class="drop-container"
+    class="dq-container"
     @dragover="dragOverHandler"
     @dragenter="dragEnterHandler"
     @dragleave="dragLeaveHandler"
