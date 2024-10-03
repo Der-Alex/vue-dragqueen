@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { defineProps, ref } from "vue";
+import { defineProps, ref, defineEmits } from "vue";
 import { useDragQueen } from "@/composables/useDragQueen";
 
 interface Item {
   id: number;
   children: Item[];
 }
+
+const myitem = ref(null);
 
 defineProps({
   item: {
@@ -18,10 +20,11 @@ defineProps({
   },
 });
 
+const emits = defineEmits(["isDragging"]);
+
 const isDraggable = ref(false);
 
 const {
-  dragHandler,
   dragStartHandler,
   dragEndHandler,
   dragEnterHandler,
@@ -29,6 +32,7 @@ const {
   dropHandler,
   pointerDownHandler,
   setDebug,
+  dragOverHandler,
 } = useDragQueen();
 
 setDebug();
@@ -36,25 +40,28 @@ setDebug();
 const onPointerDown = (evt: PointerEvent, item: Item) => {
   evt.stopPropagation();
   isDraggable.value = true;
+  emits("isDragging", true);
   pointerDownHandler(evt, item);
 };
 
-const onPointerUp = (evt: PointerEvent) => {
+const onPointerUp = () => {
   isDraggable.value = false;
+  emits("isDragging", false);
 };
 </script>
 <template>
   <div
     class="drag-item"
     :draggable="isDraggable"
-    @dragstart="(evt: DragEvent) => dragStartHandler(evt, item, index)"
+    @dragstart="(evt: DragEvent) => dragStartHandler(evt, item)"
     @dragenter="(evt: DragEvent) => dragEnterHandler(evt, item, index)"
-    @dragover.stop
+    @dragover="(evt:DragEvent) => dragOverHandler(evt, item, index)"
     @dragleave="(evt: DragEvent) => dragLeaveHandler(evt, item)"
     @dragend="dragEndHandler"
     @drop="(evt: DragEvent) => dropHandler(evt, item)"
     @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
     @pointerup="onPointerUp"
+    ref="myitem"
   >
     <slot />
     <template v-if="item && item.children && item.children.length > 0">
@@ -64,13 +71,20 @@ const onPointerUp = (evt: PointerEvent) => {
         :item="i"
         :index="j"
       >
-        <p>item {{ i.id }}</p>
+        <p class="pointer-events-none">item {{ i.id }}</p>
       </DragItem>
     </template>
   </div>
 </template>
 
 <style>
+.drag-item {
+  padding: 1rem;
+  border: 1px solid black;
+  > p {
+    margin-bottom: 1rem;
+  }
+}
 .drag-item .drag-item {
   margin-left: 0.5rem;
 }

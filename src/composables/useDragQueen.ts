@@ -1,11 +1,41 @@
+/**
+ * A composable function for managing drag-and-drop functionality in a Vue.js application.
+ * It allows for tracking drag state, identifying items, and handling drag-related events
+ * such as drag start, drag end, and item insertion into a tree-like structure.
+ *
+ * @module useDragQueen
+ */
+
 import { ref } from "vue";
 
+/**
+ * Represents an item in the tree structure.
+ *
+ * @typedef {Object} Item
+ * @property {number} id - The unique identifier of the item.
+ * @property {Item[]} children - The child items of this item.
+ * @property {any} [key] - Additional properties of the item.
+ */
 interface Item {
   id: number;
   children: Item[];
+  [key: string]: any;
 }
 
+/**
+ * @typedef {"DRAGENTER" | "DRAGLEAVE"} EventType - Represents the type of drag event.
+ *
+ */
+type EventType = "DRAGENTER" | "DRAGLEAVE";
+
+/**
+ * @typedef {"ABOVE" | "BELOW" | "INTO"} DropPosition - Represents the position where the item will be dropped.
+ *
+ */
+type DropPosition = "ABOVE" | "BELOW" | "INTO";
+
 const items = ref<Item[]>([]);
+const tempItems = ref<Item[]>([]);
 const dropItems = ref<Item[]>([]);
 const draggingItem = ref<Item | null>(null);
 const originalId = ref(-1);
@@ -15,46 +45,117 @@ const originalIndex = ref(-1);
 const lastDraggedItem = ref<Item | null>(null);
 const isTouching = ref<Item | null>(null);
 const debug = ref(false);
-const draggingElement = ref<HTMLElement>();
-const lastEvent = ref<"DRAGENTER" | "DRAGLEAVE" | "">("");
-const lastPosition = ref<"above" | "below" | "into" | "">("");
+const lastEvent = ref<EventType>();
+const dropPosition = ref<DropPosition>();
+const TEMP_ID = 99999999;
 
+/**
+ * Checks if the current dragging item is the same as the target item
+ *
+ * @param target The target item to compare.
+ * @returns boolean True if both items are the same, otherwise false.
+ */
+function isSameItem(target: Item): boolean {
+  if (!draggingItem.value) {
+    return true;
+  }
+
+  return (
+    draggingItem.value.id === enteredItem.value?.id ||
+    draggingItem.value.id - TEMP_ID === enteredItem.value?.id ||
+    draggingItem.value.id === target.id ||
+    draggingItem.value.id - TEMP_ID === target.id
+  );
+}
+
+/**
+ * Utility function to deep clone an array of items.
+ *
+ * @param {Item[]} source - The source array to clone.
+ * @returns {Item[]} - A deep clone of the source array.
+ */
+function deepClone(source: Item[]): Item[] {
+  return JSON.parse(JSON.stringify(source));
+}
+
+/**
+ * Updates the temporary tree structure to reflect the current drag state.
+ * The tempItems array will contain the preview of the tree as it would look
+ * if the dragged item were dropped at the current position.
+ */
+function updateTempTree() {
+  if (!draggingItem.value || !enteredItem.value || !dropPosition.value) {
+    tempItems.value = deepClone(items.value);
+    return;
+  }
+
+  tempItems.value = deepClone(items.value);
+  removeItemById(tempItems.value, draggingItem.value.id);
+  insertItem(
+    tempItems.value,
+    enteredItem.value.id,
+    draggingItem.value,
+    dropPosition.value
+  );
+}
+
+/**
+ * Recursively searches the tree for an item by its ID.
+ *
+ * @function findItemById
+ * @param {Item[]} tree - The tree structure to search.
+ * @param {number} id - The ID of the item to search for.
+ * @returns {Item | null} The item if found, otherwise null.
+ */
 function findItemById(tree: Item[], id: number): Item | null {
   for (const item of tree) {
     if (item.id === id) {
       return item;
     }
+
     if (item.children.length > 0) {
       const found = findItemById(item.children, id);
+
       if (found) {
         return found;
       }
     }
   }
+
   return null;
 }
 
+/**
+ * Inserts a new item into the tree at a specified position relative to a target item.
+ *
+ * @function insertItem
+ * @param {Item[]} tree - The tree structure to insert the item into.
+ * @param {number} targetId - The ID of the target item to insert relative to.
+ * @param {Item} newItem - The new item to insert.
+ * @param {DropPosition} position - The position to insert the new item (ABOVE, BELOW, INTO).
+ * @returns {boolean} True if the item was inserted successfully, false otherwise.
+ */
 function insertItem(
   tree: Item[],
   targetId: number,
   newItem: Item,
-  position: "above" | "below" | "into"
+  position: "ABOVE" | "BELOW" | "INTO"
 ): boolean {
   for (let i = 0; i < tree.length; i++) {
     const item = tree[i];
 
     if (item.id === targetId) {
-      if (position === "above") {
-        tree.splice(i, 0, newItem); // Insert before the target item
-      } else if (position === "below") {
-        tree.splice(i + 1, 0, newItem); // Insert after the target item
-      } else if (position === "into") {
+      if (position === "ABOVE") {
+        tree.splice(i, 0, newItem);
+      } else if (position === "BELOW") {
+        tree.splice(i + 1, 0, newItem);
+      } else if (position === "INTO") {
         tree[i].children.push(newItem);
       }
-      return true; // Item inserted
+
+      return true;
     }
 
-    // Recursively search in children
     if (item.children.length > 0) {
       const insertedInChildren = insertItem(
         item.children,
@@ -63,127 +164,261 @@ function insertItem(
         position
       );
       if (insertedInChildren) {
-        return true; // Item inserted in children
+        return true;
       }
     }
   }
 
-  return false; // Target item not found
+  return false;
 }
 
+/**
+ * Removes an item from the tree based on its ID.
+ *
+ * @function removeItemById
+ * @param {Item[]} tree - The tree structure to remove the item from.
+ * @param {number} targetId - The ID of the item to remove.
+ * @returns {boolean} True if the item was removed, false otherwise.
+ */
 function removeItemById(tree: Item[], targetId: number): boolean {
   for (let i = 0; i < tree.length; i++) {
     const item = tree[i];
 
-    // Prüfen, ob das aktuelle Item die Ziel-ID hat
+    // Remove the item if found
     if (item.id === targetId) {
-      tree.splice(i, 1); // Entfernt das Item aus dem Array
-      return true; // Item wurde entfernt
+      tree.splice(i, 1);
+
+      return true;
     }
 
-    // Rekursiv in den Kindern weitersuchen
     if (item.children.length > 0) {
       const removedFromChildren = removeItemById(item.children, targetId);
       if (removedFromChildren) {
-        return true; // Item wurde in den Kindern entfernt
+        return true;
       }
     }
   }
 
-  return false; // Ziel-Item nicht gefunden
+  return false;
 }
 
+/**
+ * Determines the position of the mouse pointer in relation to a
+ * specified HTML element during a drag leave event.
+ *
+ * @param {HTMLElement} enteredElement - The HTML element that the
+ *                                       drag event is currently interacting with.
+ * @param {DragEvent} event - The drag event object containing details
+ *                            about the drag operation, including the mouse
+ *                            pointer's position.
+ *
+ * @returns {DropPosition} - A string indicating the relative position of
+ *                           the pointer with respect to the entered element:
+ *                           - "ABOVE" if the pointer is above the element,
+ *                           - "BELOW" if the pointer is below the element,
+ *                           - "INTO" if the pointer is within the vertical
+ *                             bounds of the element.
+ */
 function getDragLeavePosition(
-  draggingElement: HTMLElement,
   enteredElement: HTMLElement,
   event: DragEvent
-): "above" | "below" | "into" {
+): DropPosition {
   const enteredRect = enteredElement.getBoundingClientRect();
-  const draggingRect = draggingElement.getBoundingClientRect();
-
-  // Verlassen auf Basis der Y-Positionen prüfen
   const leavePointY = event.clientY;
-
-  // Bestimmen der Mittellinie des enteredElement
   const middleY = enteredRect.top + enteredRect.height / 2;
 
-  // Prüfen ob das draggingElement oberhalb oder unterhalb verlassen hat
   if (leavePointY < middleY - enteredRect.height / 4) {
-    return "above";
+    return "ABOVE";
   } else if (leavePointY > middleY + enteredRect.height / 4) {
-    return "below";
+    return "BELOW";
   } else {
-    return "into";
+    return "INTO";
   }
 }
 
+/**
+ * A composable function that provides drag-and-drop functionality for items
+ * within a Vue application. This function handles various drag events and
+ * manages the state of dragging items, including their visual representation
+ * and the temporary tree structure during dragging.
+ *
+ * @returns {Object} An object containing reactive properties and methods
+ *                  for managing drag-and-drop interactions:
+ *                  - {Ref<Item[]>} items - The current list of items.
+ *                  - {Ref<Item[]>} dropItems - The list of items that have been dropped.
+ *                  - {Ref<Item|null>} draggingItem - The item currently being dragged.
+ *                  - {Ref<boolean>} isDragging - A boolean indicating if an item is being dragged.
+ *                  - {Ref<Item|null>} enteredItem - The item currently being hovered over.
+ *                  - {Ref<Item|null>} lastDraggedItem - The last item that was dragged.
+ *                  - {Ref<number|null>} originalIndex - The original index of the item.
+ *                  - {Ref<Item|null>} isTouching - The item being touched.
+ *                  - {Ref<Item[]>} tempItems - A temporary representation of the items during dragging.
+ *                  - {Function} dragHandler - Handles the drag event.
+ *                  - {Function} dragEndHandler - Handles the end of the drag event.
+ *                  - {Function} dragEnterHandler - Handles when an item is dragged into a drop zone.
+ *                  - {Function} dragLeaveHandler - Handles when an item leaves a drop zone.
+ *                  - {Function} dragStartHandler - Handles the start of the drag event.
+ *                  - {Function} dropHandler - Handles the drop event on items.
+ *                  - {Function} dropHandlerDropContainer - Handles the drop event on the drop container.
+ *                  - {Function} pointerDownHandler - Handles the pointer down event for touch support.
+ *                  - {Function} pointerUpHandler - Handles the pointer up event for touch support.
+ *                  - {Function} setDebug - Enables debugging mode for the drag-and-drop process.
+ *                  - {Function} dragOverHandler - Handles the drag over event for visual feedback.
+ */
 export const useDragQueen = () => {
+  /**
+   * A heper function for logging. When calling this function the internal debug flag is active and logs for the drag events are called.
+   */
   const setDebug = () => {
     debug.value = true;
   };
 
-  const dragHandler = (evt: DragEvent) => {
+  /**
+   * Handles the drag start event for an item. This function sets the dragging
+   * state, updates the currently dragged item, and stores the item's ID in
+   * the data transfer object for the drag operation.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the drag operation.
+   * @param {Item} item - The item that is being dragged.
+   */
+  const dragStartHandler = (evt: DragEvent, item: Item) => {
     evt.stopPropagation();
-    console.log(evt);
-  };
 
-  const dragStartHandler = (evt: DragEvent, item: any, index: number) => {
-    evt.stopPropagation();
     if (debug.value) {
       console.log("Event DRAGSTART", draggingItem.value?.id);
     }
 
     isDragging.value = true;
-    originalIndex.value = index;
+    draggingItem.value = item;
+    evt.dataTransfer?.setData("text/plain", item.id.toString());
+    updateTempTree();
   };
 
+  /**
+   * Handles the drag enter event for an item. This function checks if an
+   * item is being dragged, determines if the entered item is valid, and
+   * updates the temporary tree structure and drop position accordingly.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drag operation.
+   * @param {Item} item - The item that has been entered as a drop target.
+   * @param {number} index - The index of the entered item within the list.
+   */
   const dragEnterHandler = (evt: DragEvent, item: Item, index: number) => {
     evt.stopPropagation();
 
-    lastEvent.value = "DRAGENTER";
+    if (!draggingItem.value) {
+      return;
+    }
+
+    if (isSameItem(item)) {
+      return;
+    }
+
+    if (findItemById(draggingItem.value.children, item.id)) {
+      return;
+    }
 
     if (debug.value) {
       console.log("Event DRAGENTER", item.id, index);
     }
 
+    lastEvent.value = "DRAGENTER";
     enteredItem.value = item;
 
-    if (draggingItem.value?.id === enteredItem.value?.id) {
-      return;
-    }
-
-    if (draggingItem.value?.id === item.id) {
-      return;
-    }
-
-    if (originalIndex.value === index) {
-      return;
-    }
-
-    lastPosition.value = "into";
+    dropPosition.value = "INTO";
+    updateTempTree();
   };
 
+  /**
+   * Handles the drag over event for an item. This function updates the
+   * drop position based on the current mouse position and checks if the
+   * dragged item is valid for the current drop target.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drag operation.
+   * @param {Item} item - The item that is currently being hovered over.
+   * @param {number} index - The index of the hovered item within the list.
+   */
+  const dragOverHandler = (evt: any, item: Item, index: number) => {
+    evt.stopPropagation();
+
+    if (!draggingItem.value || !enteredItem.value) {
+      return;
+    }
+
+    if (isSameItem(item)) {
+      return;
+    }
+
+    if (findItemById(draggingItem.value.children, enteredItem.value.id)) {
+      return;
+    }
+
+    if (debug.value) {
+      console.log("DRAGOVER");
+    }
+
+    if (
+      dropPosition.value !==
+      getDragLeavePosition(evt.target as HTMLElement, evt)
+    ) {
+      dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
+      updateTempTree();
+    }
+  };
+
+  /**
+   * Handles the drag leave event for an item. This function determines
+   * if the dragged item is still valid as it leaves the current drop
+   * target and updates the drop position accordingly.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drag operation.
+   * @param {any} item - The item that is being left as a drop target.
+   */
   const dragLeaveHandler = (evt: any, item: any) => {
     evt.stopPropagation();
+
+    // We need a dragging item and at least one item we entered. Otherwise we wouldn't move
+    if (!draggingItem.value || !enteredItem.value) {
+      return;
+    }
+
+    if (isSameItem(item)) {
+      return;
+    }
+
+    if (findItemById(draggingItem.value.children, enteredItem.value.id)) {
+      return;
+    }
+
     lastEvent.value = "DRAGLEAVE";
+
     if (debug.value) {
       console.log("Event DRAGLEAVE", evt, item.id);
     }
 
     if (evt.target.nodeName === "#text") {
-      lastPosition.value = "into";
+      dropPosition.value = "INTO";
       return;
     }
 
-    lastPosition.value = getDragLeavePosition(
-      draggingElement.value as HTMLElement,
-      evt.target as HTMLElement,
-      evt
-    );
+    dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
+    updateTempTree();
   };
 
+  /**
+   * Handles the end of a drag operation. This function checks the validity of the
+   * drag action, updates the item list if necessary, and resets dragging-related
+   * state variables.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drag operation.
+   */
   const dragEndHandler = (evt: DragEvent) => {
     evt.stopPropagation();
+
     if (debug.value) {
       console.log(
         "Event DRAGEND",
@@ -193,17 +428,22 @@ export const useDragQueen = () => {
       );
     }
 
+    // We need a dragging item and at least one item we entered. Otherwise we wouldn't move
+    if (!draggingItem.value || !enteredItem.value) {
+      return;
+    }
+
     if (
-      draggingItem.value?.id === enteredItem.value?.id ||
-      (draggingItem.value?.id as number) - 99999999 === enteredItem.value?.id
+      draggingItem.value.id === enteredItem.value.id ||
+      (draggingItem.value.id as number) - TEMP_ID === enteredItem.value.id
     ) {
       return;
     }
 
     if (
-      draggingItem.value?.children &&
+      draggingItem.value.children &&
       draggingItem.value.children.length > 0 &&
-      enteredItem.value?.id
+      enteredItem.value.id
     ) {
       const isEnteredItemChild = findItemById(
         draggingItem.value.children,
@@ -214,33 +454,42 @@ export const useDragQueen = () => {
       }
     }
 
-    if (draggingItem.value && enteredItem.value) {
-      console.log("insert before", draggingItem.value.id, enteredItem.value.id);
-      insertItem(
-        items.value,
-        enteredItem.value.id,
-        draggingItem.value,
-        lastPosition.value as "above" | "below" | "into"
-      );
-      removeItemById(items.value, originalId.value);
-      draggingItem.value.id = originalId.value;
-    }
+    items.value = deepClone(tempItems.value);
 
-    isDragging.value = false;
     lastDraggedItem.value = draggingItem.value;
+    isDragging.value = false;
     draggingItem.value = null;
+    enteredItem.value = null;
+    dropPosition.value = undefined;
+    tempItems.value = deepClone(items.value);
   };
+
+  /**
+   * Handles the drop event for a dragged item. This function resets
+   * the dragging state and clears the entered item once the item is dropped.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drop operation.
+   * @param {any} item - The item that was the target of the drop event.
+   */
 
   const dropHandler = (evt: DragEvent, item: any) => {
     if (debug.value) {
       console.log("Event DROP", evt, item);
     }
 
-    //reorder();
     draggingItem.value = null;
     enteredItem.value = null;
   };
 
+  /**
+   * Handles the drop event specifically for the drop container. This function
+   * prevents the default browser behavior for the drop event and adds the
+   * last dragged item to the dropItems array if it exists.
+   *
+   * @param {DragEvent} evt - The drag event object containing details about the
+   *                          drop operation.
+   */
   const dropHandlerDropContainer = (evt: DragEvent) => {
     evt.preventDefault();
     if (lastDraggedItem.value) {
@@ -248,19 +497,27 @@ export const useDragQueen = () => {
     }
   };
 
+  /**
+   * Handles the pointer down event, initializing the dragging item and
+   * updating relevant state variables. This function sets the original ID
+   * of the item being dragged and modifies its ID for the dragging operation.
+   *
+   * @param {PointerEvent} evt - The pointer event object containing details
+   *                             about the pointer action.
+   * @param {any} item - The item being interacted with, containing its ID
+   *                     and other relevant properties.
+   */
   const pointerDownHandler = (evt: PointerEvent, item: any) => {
     if (debug.value) {
       console.log("Event POINTERDOWN", evt.type, isTouching.value);
     }
-
-    draggingElement.value = evt.target as HTMLElement;
 
     originalId.value = item.id;
     draggingItem.value = { ...item };
     isTouching.value = item;
 
     if (draggingItem.value) {
-      draggingItem.value.id += 99999999;
+      draggingItem.value.id += TEMP_ID;
     }
 
     if (debug.value) {
@@ -268,6 +525,14 @@ export const useDragQueen = () => {
     }
   };
 
+  /**
+   * Handles the pointer up event, resetting the state of the dragging
+   * item and clearing any references to the currently touched item.
+   * This function logs the event details if debugging is enabled.
+   *
+   * @param {PointerEvent} evt - The pointer event object containing details
+   *                             about the pointer action.
+   */
   const pointerUpHandler = (evt: PointerEvent) => {
     if (debug.value) {
       console.log("Event POINTERUP", evt.type, isTouching.value);
@@ -280,45 +545,6 @@ export const useDragQueen = () => {
     }
   };
 
-  // const reorder = () => {
-  //   if (debug.value) {
-  //     console.log("reordering");
-  //   }
-
-  //   if (
-  //     JSON.stringify(draggingItem.value) === JSON.stringify(enteredItem.value)
-  //   ) {
-  //     return;
-  //   }
-
-  //   const indexToMove = items.value.indexOf(draggingItem.value);
-  //   let indexToPlace = items.value.indexOf(enteredItem.value);
-  //   items.value.splice(indexToMove, 1);
-
-  //   if (indexToPlace > items.value.length) {
-  //     indexToPlace--;
-  //   }
-
-  //   items.value.splice(indexToPlace, 0, draggingItem.value);
-
-  //   if (debug.value) {
-  //     console.log("reordered", items);
-  //   }
-  // };
-  // const swap = (index1: number, index2: number) => {
-  //   if (debug.value) {
-  //     console.log(`swapping ${index1} and ${index2}`);
-  //   }
-
-  //   const temp = items.value[index1];
-  //   items.value[index1] = items.value[index2];
-  //   items.value[index2] = temp;
-
-  //   if (debug.value) {
-  //     console.log(items.value);
-  //   }
-  // };
-
   return {
     items,
     dropItems,
@@ -328,8 +554,7 @@ export const useDragQueen = () => {
     lastDraggedItem,
     originalIndex,
     isTouching,
-    dragHandler,
-
+    tempItems,
     dragEndHandler,
     dragEnterHandler,
     dragLeaveHandler,
@@ -339,5 +564,6 @@ export const useDragQueen = () => {
     pointerDownHandler,
     pointerUpHandler,
     setDebug,
+    dragOverHandler,
   };
 };
