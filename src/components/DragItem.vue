@@ -46,7 +46,7 @@ const onPointerUp = () => {
 <template>
   <div
     class="dq-drag-item"
-    :class="{ ' ': isDraggable }"
+    :class="{ 'h-8 overflow-hidden': isDraggable }"
     :draggable="isDraggable"
     @dragstart="(evt: DragEvent) => dragStartHandler(evt, item)"
     @dragenter="(evt: DragEvent) => dragEnterHandler(evt, item, index)"

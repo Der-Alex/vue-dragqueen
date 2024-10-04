@@ -210,10 +210,12 @@ function getDragLeavePosition(
   const enteredRect = enteredElement.getBoundingClientRect();
   const leavePointY = event.clientY;
   const middleY = enteredRect.top + enteredRect.height / 2;
+  const topBoundary = enteredRect.top + 12; // 12px from the top
+  const bottomBoundary = enteredRect.bottom - 12; // 12px from the bottom
 
-  if (leavePointY < middleY - enteredRect.height / 4) {
+  if (leavePointY < middleY - enteredRect.height / 3) {
     return "ABOVE";
-  } else if (leavePointY > middleY + enteredRect.height / 4) {
+  } else if (leavePointY > middleY + enteredRect.height / 3) {
     return "BELOW";
   } else {
     return "INTO";
@@ -314,6 +316,22 @@ export const useDragQueen = () => {
     updateTree();
   };
 
+  let debounceTimer: number | null = null;
+
+  function debounceDragLeavePosition(
+    enteredElement: HTMLElement,
+    event: DragEvent,
+    callback: (position: DropPosition) => void
+  ) {
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+    debounceTimer = window.setTimeout(() => {
+      const position = getDragLeavePosition(enteredElement, event);
+      callback(position);
+    }, 100); // Adjust time as needed
+  }
+
   /**
    * Handles the drag over event for an item. This function updates the
    * drop position based on the current mouse position and checks if the
@@ -343,13 +361,20 @@ export const useDragQueen = () => {
       console.log("DRAGOVER");
     }
 
-    if (
-      dropPosition.value !==
-      getDragLeavePosition(evt.target as HTMLElement, evt)
-    ) {
-      dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
-      updateTree();
-    }
+    debounceDragLeavePosition(evt.target as HTMLElement, evt, (position) => {
+      if (dropPosition.value !== position) {
+        dropPosition.value = position;
+        updateTree();
+      }
+    });
+
+    // if (
+    //   dropPosition.value !==
+    //   getDragLeavePosition(evt.target as HTMLElement, evt)
+    // ) {
+    //   dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
+    //   updateTree();
+    // }
   };
 
   /**
