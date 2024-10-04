@@ -59,7 +59,7 @@ items.value = [...nestedList];
         <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
       </div>
       <DropContainer>
-        <TransitionGroup name="list" mode="in-out">
+        <TransitionGroup name="none" mode="in-out">
           <DragItem
             v-for="(item, index) in items"
             :key="item.id"

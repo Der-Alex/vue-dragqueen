@@ -245,6 +245,12 @@ function getDragLeavePosition(
  *                  - {Function} dragOverHandler - Handles the drag over event for visual feedback.
  */
 export const useDragQueen = () => {
+  const backgroundColor = `rgba(${Math.floor(
+    Math.random() * 255
+  )}, ${Math.floor(Math.random() * 255)}, ${Math.floor(
+    Math.random() * 255
+  )}, 0.3 )`;
+
   /**
    * A heper function for logging. When calling this function the internal debug flag is active and logs for the drag events are called.
    */
@@ -484,5 +490,6 @@ export const useDragQueen = () => {
     dropHandler,
     pointerDownHandler,
     setDebug,
+    backgroundColor,
   };
 };

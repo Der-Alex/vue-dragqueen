@@ -28,3 +28,4 @@ const dragExitHandler = (evt: DragEvent) => {
     <slot />
   </div>
 </template>
+<style></style>
