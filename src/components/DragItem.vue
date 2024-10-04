@@ -3,6 +3,10 @@ import { defineProps, ref } from "vue";
 import { useDragQueen, type Item } from "@/composables/useDragQueen";
 
 defineProps({
+  classes: {
+    type: String,
+    default: "",
+  },
   item: {
     type: Object as () => Item,
     required: true,
@@ -10,6 +14,13 @@ defineProps({
   index: {
     type: Number,
     required: true,
+  },
+  transitionGroupName: {
+    type: String,
+    default: "none",
+  },
+  style: {
+    type: Object,
   },
 });
 
@@ -28,7 +39,6 @@ const {
   pointerDownHandler,
   setDebug,
   dragOverHandler,
-  backgroundColor,
 } = useDragQueen();
 
 setDebug();
@@ -46,7 +56,8 @@ const onPointerUp = () => {
 <template>
   <div
     class="dq-drag-item"
-    :class="{ 'h-8 overflow-hidden': isDraggable }"
+    :class="{ 'dq-is-dragging': isDraggable, classes: true }"
+    :style="style"
     :draggable="isDraggable"
     @dragstart="(evt: DragEvent) => dragStartHandler(evt, item)"
     @dragenter="(evt: DragEvent) => dragEnterHandler(evt, item, index)"
@@ -56,20 +67,20 @@ const onPointerUp = () => {
     @drop="(evt: DragEvent) => dropHandler(evt, item)"
     @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
     @pointerup="onPointerUp"
-    :style="{
-      backgroundColor,
-    }"
   >
     <div class="pointer-events-none">
       <slot :item="item" :index="index" />
     </div>
     <template v-if="item && item.children && item.children.length > 0">
-      <TransitionGroup name="none" mode="in-out">
+      <TransitionGroup :name="transitionGroupName">
         <DragItem
           v-for="(i, j) in item.children"
           :key="i.id"
           :item="i"
           :index="j"
+          :classes="classes"
+          :style="style"
+          :transition-group-name="transitionGroupName"
         >
           <template v-slot="{ item: i, index: j }">
             <slot :item="i" :index="j" />
@@ -79,17 +90,3 @@ const onPointerUp = () => {
     </template>
   </div>
 </template>
-
-<style>
-.dq-drag-item {
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  margin: 1rem 0;
-}
-.dq-drag-item .dq-drag-item {
-  margin-left: 1rem;
-}
-p {
-  padding: 0.5rem;
-}
-</style>

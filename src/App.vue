@@ -3,7 +3,8 @@ import DragItem from "@/components/DragItem.vue";
 import DropContainer from "@/components/DropContainer.vue";
 import { useDragQueen, type Item } from "./composables/useDragQueen";
 
-const { items, draggingItem, enteredItem, setDebug } = useDragQueen();
+const { items, draggingItem, enteredItem, setDebug, backgroundColor } =
+  useDragQueen();
 setDebug();
 
 const nestedList: Item[] = [
@@ -59,14 +60,16 @@ items.value = [...nestedList];
         <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
       </div>
       <DropContainer>
-        <TransitionGroup name="none" mode="in-out">
+        <TransitionGroup name="list">
           <DragItem
             v-for="(item, index) in items"
             :key="item.id"
             :item="item"
             :index="index"
+            :transition-group-name="'list'"
+            :style="{ backgroundColor }"
           >
-            <template v-slot="{ item, index }">
+            <template v-slot="{ item: item, index: index }">
               <p>Item {{ item.id }}</p>
             </template>
           </DragItem>
@@ -86,11 +89,14 @@ items.value = [...nestedList];
 .list-move, /* apply transition to moving elements */
 .list-enter-active,
 .list-leave-active {
-  transition: opacity 0.25s ease-out;
+  transition: all 0.25s ease-out;
 }
 
 .list-enter-from,
 .list-leave-to {
-  opacity: 0;
+  transform: translatex(0);
+}
+.dq-drag-item .dq-drag-item {
+  margin-left: 1.5rem;
 }
 </style>
