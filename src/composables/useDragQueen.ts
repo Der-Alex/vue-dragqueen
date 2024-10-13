@@ -203,18 +203,18 @@ function removeItemById(tree: Item[], targetId: ID): boolean {
  *                           - "INTO" if the pointer is within the vertical
  *                             bounds of the element.
  */
-function getDragLeavePosition(
+function calculateDropPosition(
   enteredElement: HTMLElement,
   event: DragEvent
 ): DropPosition {
   const enteredRect = enteredElement.getBoundingClientRect();
-  const leavePointY = event.clientY;
+  const positionY = event.clientY;
   const topBoundary = enteredRect.top + 8;
   const bottomBoundary = enteredRect.bottom - 8;
 
-  if (leavePointY < topBoundary) {
+  if (positionY < topBoundary) {
     return "ABOVE";
-  } else if (leavePointY > bottomBoundary) {
+  } else if (positionY > bottomBoundary) {
     return "BELOW";
   } else {
     return "INTO";
@@ -346,9 +346,12 @@ export const useDragQueen = () => {
 
     if (
       dropPosition.value !==
-      getDragLeavePosition(evt.target as HTMLElement, evt)
+      calculateDropPosition(evt.target as HTMLElement, evt)
     ) {
-      dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
+      dropPosition.value = calculateDropPosition(
+        evt.target as HTMLElement,
+        evt
+      );
       updateTree();
     }
   };
@@ -389,7 +392,7 @@ export const useDragQueen = () => {
       return;
     }
 
-    dropPosition.value = getDragLeavePosition(evt.target as HTMLElement, evt);
+    dropPosition.value = calculateDropPosition(evt.target as HTMLElement, evt);
     updateTree();
   };
 
