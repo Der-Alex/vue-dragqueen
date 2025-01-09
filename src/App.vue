@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import DragItem from "@/components/DragItem.vue";
 import DropContainer from "@/components/DropContainer.vue";
-import { useDragQueen, type Item } from "./composables/useDragQueen";
+import { useDragQueen } from "./composables/useDragQueen";
 
-const { items, draggingItem, enteredItem, setDebug, backgroundColor } =
-  useDragQueen();
-setDebug();
+const dq = useDragQueen();
 
-const nestedList: Item[] = [
+const nestedList = [
   {
     id: 1,
     children: [
@@ -48,40 +46,13 @@ const nestedList: Item[] = [
     ],
   },
 ];
-
-items.value = [...nestedList];
 </script>
 
 <template>
-  <div class="grid grid-cols-2 gap-4 p-4 w-full h-svh">
-    <div>
-      <div class="mb-12">
-        <p>Dragging Item: {{ draggingItem?.id ?? "-" }}</p>
-        <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
-      </div>
-      <DropContainer>
-        <TransitionGroup name="list">
-          <DragItem
-            v-for="(item, index) in items"
-            :key="item.id"
-            :item="item"
-            :index="index"
-            :transition-group-name="'list'"
-            :style="{ backgroundColor }"
-          >
-            <template v-slot="{ item: item, index: index }">
-              <p>Item {{ item.id }}</p>
-            </template>
-          </DragItem>
-        </TransitionGroup>
-      </DropContainer>
-    </div>
-
-    <div class="self-center">
-      <pre class="text-xs">
-        {{ items }}
-      </pre>
-    </div>
+  <div class="w-full h-svh" @pointermove="dq.onPointerMove">
+    <DropContainer>
+      <DragItem />
+    </DropContainer>
   </div>
 </template>
 

@@ -1,30 +1,7 @@
-<script setup lang="ts">
-const dropHandler = (evt: DragEvent) => {
-  evt.preventDefault();
-};
-const dragEnterHandler = (evt: DragEvent) => {
-  evt.preventDefault();
-};
-const dragOverHandler = (evt: DragEvent) => {
-  evt.preventDefault();
-};
-const dragLeaveHandler = (evt: DragEvent) => {
-  evt.preventDefault();
-};
-const dragExitHandler = (evt: DragEvent) => {
-  evt.preventDefault();
-};
-</script>
+<script setup lang="ts"></script>
 
 <template>
-  <div
-    class="dq-container"
-    @dragover="dragOverHandler"
-    @dragenter="dragEnterHandler"
-    @dragleave="dragLeaveHandler"
-    @dragexit="dragExitHandler"
-    @drop="dropHandler"
-  >
+  <div class="dq-container">
     <slot />
   </div>
 </template>
