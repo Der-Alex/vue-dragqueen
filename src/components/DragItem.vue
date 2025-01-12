@@ -26,22 +26,17 @@ defineSlots<{
   default(props: { item: Item; index: number }): any;
 }>();
 
-const { pointerDownHandler, setDebug, dragItems, draggingItem } =
-  useDragQueen();
+const { pointerDownHandler, setDebug, draggingItem } = useDragQueen();
 
 setDebug(false);
 
-const onPointerDown = (evt: MouseEvent, item: Item) => {
+const onPointerDown = (evt: PointerEvent, item: Item) => {
   evt.stopPropagation();
   if (evt.button !== 0) {
     return;
   }
   pointerDownHandler(evt, item);
 };
-
-onBeforeMount(() => {
-  dragItems.value.length = 0;
-});
 </script>
 <template>
   <div
@@ -53,10 +48,11 @@ onBeforeMount(() => {
         absolute: draggingItem?.id === item.id,
       },
     ]"
-    @mousedown="(evt: MouseEvent) => onPointerDown(evt, item)"
+    @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
   >
     <div
       class="dq-element pointer-events-none w-full bg-green-200 p-2 rounded-lg border border-dashed border-green-400"
+      :data-id="item.id"
     >
       <slot :item="item" :index="index" />
     </div>
@@ -71,7 +67,6 @@ onBeforeMount(() => {
         :index="j"
         :classes="classes"
         :transition-group-name="transitionGroupName"
-        :ref="(el) => dragItems.push(el)"
       >
         <template v-slot="{ item: i, index: j }">
           <slot :item="i" :index="j" />

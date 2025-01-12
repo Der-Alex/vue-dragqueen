@@ -1,19 +1,10 @@
 <script setup lang="ts">
 import DragItem from "@/components/DragItem.vue";
 import DropContainer from "@/components/DropContainer.vue";
-import { ID, useDragQueen, type Item } from "./composables/useDragQueen";
+import { useDragQueen, type Item } from "./composables/useDragQueen";
 import GhostItem from "./components/GhostItem.vue";
-import { computed } from "vue";
 
-const {
-  items,
-  draggingItem,
-  enteredItem,
-  dragItems,
-  moveStyles,
-  setDebug,
-  ghost,
-} = useDragQueen();
+const { items, draggingItem, enteredItem, setDebug, ghost } = useDragQueen();
 setDebug(false);
 
 const nestedList: Item[] = [
@@ -99,7 +90,6 @@ items.value = [...nestedList2];
             :index="index"
             :transition-group-name="'list'"
             classes="rounded-lg bg-green-100"
-            :ref="(el) => dragItems.push(el)"
           >
             <template v-slot="{ item: item, index: index }">
               <p>Item {{ item.id }}</p>
