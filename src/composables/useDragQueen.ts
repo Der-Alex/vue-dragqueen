@@ -42,6 +42,7 @@ type DropPosition = "ABOVE" | "BELOW" | "INTO";
 
 let animationFrameId: number | null = null;
 const items = ref<Item[]>([]);
+const backupItems = ref<Item[]>([]);
 const isDragging = ref(false);
 const dragItems = ref<HTMLElement[]>([]);
 const draggingItem = ref<Item | null>(null);
@@ -165,6 +166,13 @@ const pointerUpHandler = () => {
 
   removeAllGhostItems(items.value);
 
+  if (currentTarget.value) {
+    currentTarget.value.style.top = "";
+    currentTarget.value.style.left = "";
+    currentTarget.value.style.width = "";
+    currentTarget.value.style.height = "";
+  }
+
   draggingItem.value = null;
   enteredItem.value = null;
   isDragging.value = false;
@@ -191,6 +199,34 @@ const pointerMoveHandler = (evt: PointerEvent) => {
     checkInsertion();
     animationFrameId = null;
   });
+};
+
+const hasItemBefore = (list: Item[], idToFind: ID): boolean => {
+  for (const [index, item] of list.entries()) {
+    if (String(item.id) === String(ghostItem.id)) {
+      if (index === 0) {
+        return false;
+      }
+      if (
+        !list[index - 1].id ||
+        (String(list[index - 1].id) === String(ghostItem.id) &&
+          index - 1 === 0) ||
+        String(list[index - 1].id) === String(idToFind)
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    if (item.children && item.children.length > 0) {
+      const hasItem = hasItemBefore(item.children, idToFind);
+
+      if (hasItem) {
+        return hasItem;
+      }
+    }
+  }
+  return false;
 };
 
 const checkInsertion = () => {
@@ -221,9 +257,12 @@ const checkInsertion = () => {
     return;
   }
 
-  const currentItemRect = ghostElement.getBoundingClientRect();
+  if (!hasItemBefore(items.value, draggingItem.value.id)) {
+    isInserted.value === false;
+    return;
+  }
 
-  console.log("currentItemRect", currentItemRect);
+  const currentItemRect = ghostElement.getBoundingClientRect();
 
   if (
     isInserted.value === false &&
@@ -359,6 +398,7 @@ export const useDragQueen = () => {
    *                     and other relevant properties.
    */
   const pointerDownHandler = (evt: PointerEvent, item: Item) => {
+    backupItems.value = [...items.value];
     currentTarget.value = evt.target as HTMLElement;
     dragItems.value = [
       ...(Array.from(
