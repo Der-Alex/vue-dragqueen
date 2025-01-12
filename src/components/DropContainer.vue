@@ -1,15 +1,10 @@
 <script setup lang="ts"></script>
 
 <template>
-  <div class="dq-container">
+  <div
+    class="dq-container border-2 border-dashed border-gray-700 p-4 rounded-lg"
+  >
     <slot />
   </div>
 </template>
-<style>
-.dq-container {
-  position: relative;
-  background: rgba(230, 60, 60, 0.5);
-  padding: 0.5rem;
-  border: 1px dashed rgba(255, 60, 60, 1);
-}
-</style>
+<style></style>

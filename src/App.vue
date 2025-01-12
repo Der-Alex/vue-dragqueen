@@ -1,22 +1,124 @@
 <script setup lang="ts">
 import DragItem from "@/components/DragItem.vue";
 import DropContainer from "@/components/DropContainer.vue";
+import { ID, useDragQueen, type Item } from "./composables/useDragQueen";
+import GhostItem from "./components/GhostItem.vue";
+import { computed } from "vue";
+
+const {
+  items,
+  draggingItem,
+  enteredItem,
+  dragItems,
+  moveStyles,
+  setDebug,
+  ghost,
+} = useDragQueen();
+setDebug(false);
+
+const nestedList: Item[] = [
+  {
+    id: 1,
+    children: [],
+  },
+  {
+    id: 2,
+    children: [],
+  },
+  {
+    id: 3,
+    children: [],
+  },
+  {
+    id: 4,
+    children: [],
+  },
+  {
+    id: 5,
+    children: [],
+  },
+];
+
+const nestedList2: Item[] = [
+  {
+    id: 1,
+    children: [
+      {
+        id: 11,
+        children: [],
+      },
+      {
+        id: 12,
+        children: [
+          {
+            id: 121,
+            children: [],
+          },
+          {
+            id: 122,
+            children: [],
+          },
+        ],
+      },
+      {
+        id: 13,
+        children: [],
+      },
+    ],
+  },
+  {
+    id: 2,
+    children: [
+      {
+        id: 21,
+        children: [],
+      },
+      {
+        id: 22,
+        children: [],
+      },
+    ],
+  },
+];
+
+items.value = [...nestedList2];
 </script>
 
 <template>
-  <div class="app w-full">
-    <DropContainer>
-      <DragItem>1</DragItem>
-      <DragItem>2</DragItem>
-      <DragItem>3</DragItem>
-    </DropContainer>
+  <div class="grid grid-cols-2 gap-4 p-4 w-full h-svh">
+    <div>
+      <div class="mb-12">
+        <p>Dragging Item: {{ draggingItem?.id ?? "-" }}</p>
+        <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
+      </div>
+      <DropContainer>
+        <template v-for="(item, index) in items" :key="item.id">
+          <DragItem
+            v-if="!item.ghost"
+            :item="item"
+            :index="index"
+            :transition-group-name="'list'"
+            classes="rounded-lg bg-green-100"
+            :ref="(el) => dragItems.push(el)"
+          >
+            <template v-slot="{ item: item, index: index }">
+              <p>Item {{ item.id }}</p>
+            </template>
+          </DragItem>
+          <GhostItem v-if="item.ghost" ref="ghost"></GhostItem>
+        </template>
+      </DropContainer>
+    </div>
+
+    <div class="self-center">
+      <pre class="text-xs">
+        {{ items }}
+      </pre>
+    </div>
   </div>
 </template>
 
 <style>
-.app {
-  height: 5000px;
-}
 .list-move, /* apply transition to moving elements */
 .list-enter-active,
 .list-leave-active {

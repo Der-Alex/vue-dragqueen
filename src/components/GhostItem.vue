@@ -1,15 +1,11 @@
 <script setup lang="ts">
-import { defineProps } from "vue";
-defineProps({
-  size: {
-    type: Object as () => { width: number; height: number },
-    default: () => ({ width: 16, height: 128 }),
-  },
-});
+import { useDragQueen } from "@/composables/useDragQueen";
+
+const { itemSize } = useDragQueen();
 </script>
 <template>
   <div
-    class="dq-ghost-item rounded-lg border border-dashed border-green-400"
-    :style="`width: ${size.width}px; height: ${size.height}px`"
+    class="dq-ghost-item dq-drag-item rounded-lg border border-dashed border-green-400"
+    :style="`width: ${itemSize.width}px; height: ${itemSize.height}px`"
   ></div>
 </template>

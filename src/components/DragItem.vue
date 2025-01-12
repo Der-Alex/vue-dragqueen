@@ -1,117 +1,83 @@
 <script setup lang="ts">
-import { defineProps, defineEmits, ref, computed, onMounted } from "vue";
+import { defineProps, onBeforeMount } from "vue";
+import { useDragQueen, type Item } from "@/composables/useDragQueen";
 import GhostItem from "./GhostItem.vue";
 
-defineProps({});
-defineEmits([]);
-const dragItem = ref<HTMLElement | null>(null);
-const isDragging = ref(false);
-const classList = ref<string[]>([]);
-const pointerX = ref<number>(0);
-const pointerY = ref<number>(0);
-const clickPosX = ref<number>(0);
-const clickPosY = ref<number>(0);
-const itemSize = ref<{ width: number; height: number }>({
-  width: 0,
-  height: 0,
+defineProps({
+  classes: {
+    type: String,
+    default: "",
+  },
+  item: {
+    type: Object as () => Item,
+    required: true,
+  },
+  index: {
+    type: Number,
+    required: true,
+  },
+  transitionGroupName: {
+    type: String,
+    default: "none",
+  },
 });
 
-const body = ref<HTMLElement | null>(null);
+defineSlots<{
+  default(props: { item: Item; index: number }): any;
+}>();
 
-const itemData = computed(() => {
-  if (!dragItem.value) {
-    return "";
+const { pointerDownHandler, setDebug, dragItems, draggingItem } =
+  useDragQueen();
+
+setDebug(false);
+
+const onPointerDown = (evt: MouseEvent, item: Item) => {
+  evt.stopPropagation();
+  if (evt.button !== 0) {
+    return;
   }
-
-  return `t: ${pointerX.value}px | l: ${pointerY.value}px`;
-});
-
-const onPointerDown = (evt: PointerEvent) => {
-  if (!body.value) {
-    return false;
-  }
-
-  isDragging.value = true;
-  const target = evt.target as HTMLElement;
-  const rect = target.getBoundingClientRect();
-  itemSize.value = { width: rect.width, height: rect.height };
-  clickPosX.value = evt.clientX - rect.left;
-  clickPosY.value = evt.clientY - rect.top;
-
-  const bodyRect = body.value.getBoundingClientRect();
-  const scrollTopPos = body.value.scrollTop;
-
-  pointerX.value = evt.clientX;
-  pointerY.value = evt.clientY - bodyRect.top + scrollTopPos;
-
-  if (!classList.value.includes("absolute")) {
-    classList.value.push("absolute");
-  }
+  pointerDownHandler(evt, item);
 };
 
-const onPointerUp = (evt: PointerEvent) => {
-  isDragging.value = false;
-  const index = classList.value.indexOf("absolute");
-  classList.value.splice(index, 1);
-
-  if (!dragItem.value) {
-    return false;
-  }
-};
-
-const onPointerMove = (evt: PointerEvent) => {
-  if (!isDragging.value) {
-    return false;
-  }
-
-  if (!body.value) {
-    return false;
-  }
-
-  const bodyRect = body.value.getBoundingClientRect();
-  const scrollTopPos = body.value.scrollTop;
-
-  pointerX.value = evt.clientX;
-  pointerY.value = evt.clientY - bodyRect.top + scrollTopPos;
-};
-
-const moveStyles = () => {
-  if (!isDragging.value) {
-    return "";
-  }
-  if (!dragItem.value) {
-    return "";
-  }
-  let x = pointerX.value - clickPosX.value;
-  let y = pointerY.value - clickPosY.value;
-  if (x < 0) {
-    x = 0;
-  }
-  if (y < 0) {
-    y = 0;
-  }
-  return `top: ${y}px; left: ${x}px;`;
-};
-
-onMounted(() => {
-  body.value = document.body;
-  //body.addEventListener('scroll', onScroll);
-  body.value.addEventListener("pointermove", onPointerMove);
-  body.value.addEventListener("pointerup", onPointerUp);
+onBeforeMount(() => {
+  dragItems.value.length = 0;
 });
 </script>
 <template>
   <div
-    class="dq-drag-item p-2 border border-dashed bg-green-300 border-green-400 rounded-lg w-max cursor-grab min-w-32 flex justify-center"
-    :class="[...classList, { 'cursor-grabbing': isDragging }]"
-    :style="moveStyles()"
-    @pointerdown.prevent="onPointerDown"
-    @pointerup.prevent="onPointerUp"
-    ref="dragItem"
+    :id="`dq-item-${item.id}`"
+    class="dq-drag-item"
+    :class="[
+      classes,
+      {
+        absolute: draggingItem?.id === item.id,
+      },
+    ]"
+    @mousedown="(evt: MouseEvent) => onPointerDown(evt, item)"
   >
-    <div class="pointer-events-none">
-      <slot />
+    <div
+      class="dq-element pointer-events-none w-full bg-green-200 p-2 rounded-lg border border-dashed border-green-400"
+    >
+      <slot :item="item" :index="index" />
     </div>
+    <template
+      v-for="(i, j) in item.children"
+      v-if="item && item.children && item.children.length > 0"
+      :key="i.id"
+    >
+      <DragItem
+        v-if="!i.ghost"
+        :item="i"
+        :index="j"
+        :classes="classes"
+        :transition-group-name="transitionGroupName"
+        :ref="(el) => dragItems.push(el)"
+      >
+        <template v-slot="{ item: i, index: j }">
+          <slot :item="i" :index="j" />
+        </template>
+      </DragItem>
+      <GhostItem v-if="i.ghost" ref="ghost"></GhostItem>
+    </template>
   </div>
-  <GhostItem v-if="isDragging" :size="itemSize" />
 </template>
