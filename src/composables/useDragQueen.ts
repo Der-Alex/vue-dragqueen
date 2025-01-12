@@ -243,24 +243,34 @@ function calculateDropPosition(
   }
 }
 
+const recursiveSplice = (
+  list: Item[],
+  idToFind: ID,
+  itemToReplace: Item | null = null,
+  deleteCount: number
+) => {
+  for (let [index, item] of list.entries()) {
+    if (item.id === idToFind) {
+      if (itemToReplace !== null) {
+        list.splice(index, deleteCount, itemToReplace);
+      } else {
+        list.splice(index, deleteCount);
+      }
+      return;
+    }
+    if (item.children && item.children.length > 0) {
+      recursiveSplice(item.children, idToFind, itemToReplace, deleteCount);
+    }
+  }
+};
+
 const pointerUpHandler = () => {
   document.body.style.userSelect = "";
-
   dragItems.value.length = 0;
 
   if (draggingItem.value) {
-    const draggingIndex = items.value.findIndex(
-      (item) => item.id === draggingItem.value?.id
-    );
-
-    items.value.splice(draggingIndex, 1);
-
-    const ghostIndex = items.value.findIndex((item) => item.id === "ghost");
-    if (ghostIndex > -1) {
-      if (draggingItem.value) {
-        items.value.splice(ghostIndex, 1, draggingItem.value);
-      }
-    }
+    recursiveSplice(items.value, draggingItem.value.id, null, 1);
+    recursiveSplice(items.value, ghostItem.id, draggingItem.value, 1);
   }
 
   draggingItem.value = null;
@@ -285,9 +295,22 @@ const pointerMoveHandler = (evt: MouseEvent) => {
     let y = pointerY.value - clickPosY.value;
     currentTarget.value.style.top = `${y}px`;
     currentTarget.value.style.left = `${x}px`;
+    checkIntersection();
     animationFrameId = null;
   });
-  checkIntersection();
+};
+
+const recursiveRemoveGhost = (list: Item[]) => {
+  for (let index = 0; index < list.length; index++) {
+    if (list[index].id === "ghost") {
+      list.splice(index, 1);
+      return;
+    }
+
+    if (list[index].children && list[index].children.length > 0) {
+      recursiveRemoveGhost(list[index].children);
+    }
+  }
 };
 
 const checkIntersection = () => {
@@ -295,20 +318,13 @@ const checkIntersection = () => {
     return;
   }
 
-  const draggingEl =
-    (dragItems.value.find(
-      (item) => item.$props.item.id === draggingItem.value?.id
-    )?.$el as HTMLElement) ?? null;
-
-  if (!draggingEl) {
+  if (!currentTarget.value) {
     return;
   }
 
-  const draggingRect = draggingEl.getBoundingClientRect();
+  const draggingRect = currentTarget.value.getBoundingClientRect();
 
   const recursiveCheck = (list: Item[], parentIndex: number | null = null) => {
-    const ghostIndex = list.findIndex((item) => item.id === "ghost");
-
     for (let i = 0; i < list.length; i++) {
       const currentItem = list[i];
       const itemComponent = dragItems.value.find(
@@ -319,9 +335,15 @@ const checkIntersection = () => {
         continue;
       }
 
-      const itemRect = (
-        itemComponent.$el as HTMLElement
-      ).getBoundingClientRect();
+      const itemToCheck = (itemComponent.$el as HTMLElement).querySelector(
+        ".dq-element"
+      );
+
+      if (!itemToCheck) {
+        continue;
+      }
+
+      const itemRect = itemToCheck.getBoundingClientRect();
 
       // Ignoriere das draggingItem und das ghostItem
       if (
@@ -339,7 +361,8 @@ const checkIntersection = () => {
         const half = itemRect.bottom - itemRect.height / 2;
 
         // Entferne das ghostItem, falls es existiert
-        list.splice(ghostIndex, 1);
+
+        recursiveRemoveGhost(items.value);
 
         if (draggingRect.top <= half) {
           list.splice(i, 0, ghostItem);
@@ -347,19 +370,14 @@ const checkIntersection = () => {
           list.splice(i + 1, 0, ghostItem);
         }
 
-        return true; // Intersection gefunden, abbrechen
+        return;
       }
 
       // Rekursiv die Kinder überprüfen
       if (currentItem.children && currentItem.children.length > 0) {
-        const found = recursiveCheck(currentItem.children, i);
-        if (found) {
-          return true; // Intersection in Kinderliste gefunden
-        }
+        recursiveCheck(currentItem.children, i);
       }
     }
-
-    return false; // Keine Intersection gefunden
   };
 
   recursiveCheck(items.value);
@@ -619,21 +637,18 @@ export const useDragQueen = () => {
    *                     and other relevant properties.
    */
   const pointerDownHandler = (evt: MouseEvent, item: Item) => {
-    currentTarget.value = evt.target;
+    currentTarget.value = evt.target as HTMLElement;
     document.body.style.userSelect = "none";
     if (debug.value) {
       console.log("Event POINTERDOWN", evt.type);
     }
 
-    console.log("DDD", dragItems.value, dragItems.value.length);
-
-    const target = evt.target as HTMLElement;
-    const rect = target.getBoundingClientRect();
+    const rect = currentTarget.value.getBoundingClientRect();
 
     draggingItem.value = JSON.parse(JSON.stringify(item));
 
-    target.style.width = `${rect.width}px`;
-    target.style.height = `${rect.height}px`;
+    currentTarget.value.style.width = `${rect.width}px`;
+    currentTarget.value.style.height = `${rect.height}px`;
 
     const recursiveCheck = (list: Item[]) => {
       for (let i = 0; i < list.length; i++) {
@@ -673,26 +688,8 @@ export const useDragQueen = () => {
     let x = pointerX.value - clickPosX.value;
     let y = pointerY.value - clickPosY.value;
 
-    target.style.top = `${y}px`;
-    target.style.left = `${x}px`;
-  };
-
-  const moveStyles = () => {
-    if (!draggingItem.value) {
-      return "";
-    }
-
-    let x = pointerX.value - clickPosX.value;
-    let y = pointerY.value - clickPosY.value;
-
-    if (x < 0) {
-      x = 0;
-    }
-    if (y < 0) {
-      y = 0;
-    }
-
-    return `width: ${itemSize.value.width}px; height: ${itemSize.value.height}px; top: ${y}px; left: ${x}px;`;
+    currentTarget.value.style.top = `${y}px`;
+    currentTarget.value.style.left = `${x}px`;
   };
 
   return {
@@ -702,7 +699,6 @@ export const useDragQueen = () => {
     lastDraggedItem,
     dragItems,
     itemSize,
-    moveStyles,
     pointerDownHandler,
     pointerMoveHandler,
     pointerUpHandler,
