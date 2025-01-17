@@ -145,6 +145,11 @@ const recursiveFindIndex = (idtoFind: ID, list: Item[]): number => {
 };
 
 const pointerUpHandler = () => {
+  if (!window || !document || !document.body) {
+    // TODO: check how to deal with stuff like that
+    return;
+  }
+
   document.body.style.userSelect = "";
 
   const ghostElement = document.querySelector(".dq-ghost-item") as HTMLElement;
@@ -179,6 +184,11 @@ const pointerUpHandler = () => {
 };
 
 const pointerMoveHandler = (evt: PointerEvent) => {
+  if (!window || !document || !document.body) {
+    // TODO: check how to deal with stuff like that
+    return;
+  }
+
   if (animationFrameId) {
     return;
   }
@@ -357,9 +367,9 @@ const checkIntersection = () => {
   }
 };
 
-if (document && document.body) {
-  document.body.addEventListener("pointerup", pointerUpHandler);
-  document.body.addEventListener("pointermove", pointerMoveHandler);
+if (window) {
+  window.addEventListener("pointerup", pointerUpHandler);
+  window.addEventListener("pointermove", pointerMoveHandler);
 }
 
 /**
@@ -398,6 +408,11 @@ export const useDragQueen = () => {
    *                     and other relevant properties.
    */
   const pointerDownHandler = (evt: PointerEvent, item: Item) => {
+    if (!window || !document || !document.body) {
+      // TODO: check how to deal with stuff like that
+      return;
+    }
+
     backupItems.value = [...items.value];
     currentTarget.value = evt.target as HTMLElement;
     dragItems.value = [
