@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import DragItem from "@/components/DragItem.vue";
-import DropContainer from "@/components/DropContainer.vue";
-import { useDragQueen, type Item } from "./composables/useDragQueen";
-import GhostItem from "./components/GhostItem.vue";
+import DragItem from '@/components/DragItem.vue';
+import DropContainer from '@/components/DropContainer.vue';
+import { useDragQueen, type Item } from './composables/useDragQueen';
+import GhostItem from './components/GhostItem.vue';
 
 const { items, draggingItem, enteredItem, setDebug, ghost } = useDragQueen();
 setDebug(false);
@@ -79,23 +79,26 @@ items.value = [...nestedList2];
   <div class="grid grid-cols-2 gap-4 p-4 w-full h-svh">
     <div>
       <div class="mb-12">
-        <p>Dragging Item: {{ draggingItem?.id ?? "-" }}</p>
-        <p>Entered Item: {{ enteredItem?.id ?? "-" }}</p>
+        <p>Dragging Item: {{ draggingItem?.id ?? '-' }}</p>
+        <p>Entered Item: {{ enteredItem?.id ?? '-' }}</p>
       </div>
       <DropContainer>
-        <template v-for="(item, index) in items" :key="item.id">
+        <template
+          v-for="(item, index) in items"
+          :key="item.id">
           <DragItem
             v-if="!item.ghost"
             :item="item"
             :index="index"
             :transition-group-name="'list'"
-            classes="rounded-lg bg-green-100"
-          >
+            classes="rounded-lg bg-green-100">
             <template v-slot="{ item: item, index: index }">
               <p>Item {{ item.id }}</p>
             </template>
           </DragItem>
-          <GhostItem v-if="item.ghost" ref="ghost"></GhostItem>
+          <GhostItem
+            v-if="item.ghost"
+            ref="ghost"></GhostItem>
         </template>
       </DropContainer>
     </div>
