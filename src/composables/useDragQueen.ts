@@ -225,8 +225,12 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
   pointerX.value = evt.clientX;
   pointerY.value = evt.clientY + window.scrollY;
 
-  let x = pointerX.value - clickPosX.value;
-  let y = pointerY.value - clickPosY.value;
+  const computedStyle = window.getComputedStyle(currentTarget.value);
+  const marginLeft = parseFloat(computedStyle.marginLeft) || 0;
+  const marginTop = parseFloat(computedStyle.marginTop) || 0;
+
+  let x = pointerX.value - clickPosX.value - marginLeft;
+  let y = pointerY.value - clickPosY.value - marginTop;
 
   currentTarget.value.style.top = `${y}px`;
   currentTarget.value.style.left = `${x}px`;

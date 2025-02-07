@@ -1,3 +1,31 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  --dq-indent: 1rem;
+  --dq-item-border: 1px dashed #ccc;
+  --dq-drag-color: rgba(109, 216, 109, 1);
+  --dq-ghost-color: rgba(247, 200, 200, 1);
+  --dq-drag-z-index: 1;
+}
+
+.dq-drag-item {
+  box-sizing: border-box;
+  border: var(--dq-item-border);
+}
+
+.dq-drag-item .dq-drag-item {
+  margin-inline-start: var(--dq-indent);
+}
+
+.dq-drag-item--drag {
+  position: absolute;
+  background-color: var(--dq-drag-color);
+  z-index: var(--dq-drag-z-index);
+}
+
+.dq-element {
+  display: flow-root;
+  pointer-events: none;
+}
+
+.dq-ghost-item {
+  background-color: var(--dq-ghost-color);
+}

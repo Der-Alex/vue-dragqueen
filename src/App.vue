@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DragItem from '@/components/DragItem.vue';
+import DragItem from './components/DragItem.vue';
 import { useDragQueen, type Item } from './composables/useDragQueen';
 import GhostItem from './components/GhostItem.vue';
 
@@ -89,7 +89,7 @@ items.value = [...nestedList2];
           :item="item"
           :index="index"
           :transition-group-name="'list'"
-          classes="rounded-lg bg-green-100">
+          class="">
           <template v-slot="{ item: item, index: index }">
             <p>Item {{ item.id }}</p>
           </template>
@@ -107,19 +107,3 @@ items.value = [...nestedList2];
     </div>
   </div>
 </template>
-
-<style>
-.list-move, /* apply transition to moving elements */
-.list-enter-active,
-.list-leave-active {
-  transition: all 0.25s ease-out;
-}
-
-.list-enter-from,
-.list-leave-to {
-  transform: translatex(0);
-}
-.dq-drag-item .dq-drag-item {
-  margin-left: 1.5rem;
-}
-</style>

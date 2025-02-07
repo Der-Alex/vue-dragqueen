@@ -45,16 +45,19 @@ const onPointerDown = (evt: PointerEvent, item: Item) => {
     :class="[
       classes,
       {
-        absolute: draggingItem?.id === item.id,
+        'dq-drag-item--drag': draggingItem?.id === item.id,
       },
     ]"
     @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)">
     <div
-      class="dq-element pointer-events-none w-full bg-green-200 p-2 rounded-lg border border-dashed border-green-400"
+      class="dq-element"
+      v-bind="$attrs"
       :data-id="item.id">
       <slot
         :item="item"
-        :index="index" />
+        :index="index">
+        <p>Item {{ item.id }}</p>
+      </slot>
     </div>
     <template
       v-for="(i, j) in item.children"
@@ -62,6 +65,7 @@ const onPointerDown = (evt: PointerEvent, item: Item) => {
       :key="i.id">
       <DragItem
         v-if="!i.ghost"
+        v-bind="$attrs"
         :item="i"
         :index="j"
         :classes="classes"
