@@ -3,9 +3,23 @@
   "private": false,
   "version": "0.1.0",
   "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/vue-dragqueen.umd.cjs",
+  "module": "./dist/vue-dragqueen.js",
+  "exports": {
+    ".": {
+      "import": "./dist/vue-dragqueen.js",
+      "require": "./dist/vue-dragqueen.umd.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./style.css": "./dist/style.css"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc && vite build",
+    "build": "vite build && vue-tsc --declaration --emitDeclarationOnly",
+    "types": "vue-tsc",
     "preview": "vite preview"
   },
   "dependencies": {

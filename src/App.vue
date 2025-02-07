@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import DragItem from '@/components/DragItem.vue';
-import DropContainer from '@/components/DropContainer.vue';
 import { useDragQueen, type Item } from './composables/useDragQueen';
 import GhostItem from './components/GhostItem.vue';
 
@@ -82,25 +81,23 @@ items.value = [...nestedList2];
         <p>Dragging Item: {{ draggingItem?.id ?? '-' }}</p>
         <p>Entered Item: {{ enteredItem?.id ?? '-' }}</p>
       </div>
-      <DropContainer>
-        <template
-          v-for="(item, index) in items"
-          :key="item.id">
-          <DragItem
-            v-if="!item.ghost"
-            :item="item"
-            :index="index"
-            :transition-group-name="'list'"
-            classes="rounded-lg bg-green-100">
-            <template v-slot="{ item: item, index: index }">
-              <p>Item {{ item.id }}</p>
-            </template>
-          </DragItem>
-          <GhostItem
-            v-if="item.ghost"
-            ref="ghost"></GhostItem>
-        </template>
-      </DropContainer>
+      <template
+        v-for="(item, index) in items"
+        :key="item.id">
+        <DragItem
+          v-if="!item.ghost"
+          :item="item"
+          :index="index"
+          :transition-group-name="'list'"
+          classes="rounded-lg bg-green-100">
+          <template v-slot="{ item: item, index: index }">
+            <p>Item {{ item.id }}</p>
+          </template>
+        </DragItem>
+        <GhostItem
+          v-if="item.ghost"
+          ref="ghost"></GhostItem>
+      </template>
     </div>
 
     <div class="self-center">
