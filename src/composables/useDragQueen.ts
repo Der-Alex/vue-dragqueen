@@ -6,7 +6,7 @@
  * @module useDragQueen
  */
 
-import { ref, onUnmounted } from 'vue';
+import { ref, onUnmounted } from "vue";
 
 /**
  * Represents the type of an item's ID. It is either a string or a number.
@@ -34,7 +34,7 @@ export type Item = {
  *
  * @typedef {'ABOVE' | 'BELOW' | 'INTO'} DropPosition
  */
-type DropPosition = 'ABOVE' | 'BELOW' | 'INTO';
+type DropPosition = "ABOVE" | "BELOW" | "INTO";
 
 let animationFrameId: number | null = null;
 const items = ref<Item[]>([]);
@@ -59,7 +59,7 @@ const itemSize = ref<{ width: number; height: number }>({
 });
 
 const ghostItem: Item = {
-  id: 'ghost',
+  id: "ghost",
   children: [],
   ghost: true,
 };
@@ -113,13 +113,18 @@ const recursiveSplice = (
   idToFind: ID,
   itemToReplace: Item | null = null,
   deleteCount: number,
-  position: DropPosition = 'ABOVE'
+  position: DropPosition = "ABOVE"
 ): boolean => {
   for (let [index, item] of list.entries()) {
     if (String(item.id) === String(idToFind)) {
       if (itemToReplace !== null) {
-        let realIndex = position === 'ABOVE' ? index : position === 'BELOW' ? index + 1 : index - 1;
-        if (position === 'INTO') {
+        let realIndex =
+          position === "ABOVE"
+            ? index
+            : position === "BELOW"
+            ? index + 1
+            : index - 1;
+        if (position === "INTO") {
           list[realIndex].children.push(itemToReplace);
           list.splice(index, deleteCount);
         } else {
@@ -132,7 +137,13 @@ const recursiveSplice = (
     }
 
     if (item.children && item.children.length > 0) {
-      const found = recursiveSplice(item.children, idToFind, itemToReplace, deleteCount, position);
+      const found = recursiveSplice(
+        item.children,
+        idToFind,
+        itemToReplace,
+        deleteCount,
+        position
+      );
 
       if (found) {
         return found;
@@ -199,11 +210,13 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
 
   backupItems.value = [...items.value];
   currentTarget.value = evt.target as HTMLElement;
-  dragItems.value = [...(Array.from(document.querySelectorAll('.dq-element')) as HTMLElement[])];
-  document.body.style.userSelect = 'none';
+  dragItems.value = [
+    ...(Array.from(document.querySelectorAll(".dq-element")) as HTMLElement[]),
+  ];
+  document.body.style.userSelect = "none";
 
   if (debug.value) {
-    console.log('Event POINTERDOWN', evt.type);
+    console.log("Event POINTERDOWN", evt.type);
   }
 
   const rect = currentTarget.value.getBoundingClientRect();
@@ -301,19 +314,19 @@ const pointerUpHandler = () => {
     return;
   }
 
-  document.body.style.userSelect = '';
+  document.body.style.userSelect = "";
 
-  const ghostElement = document.querySelector('.dq-ghost-item') as HTMLElement;
+  const ghostElement = document.querySelector(".dq-ghost-item") as HTMLElement;
 
   if (ghostElement) {
-    ghostElement.style.transform = '';
+    ghostElement.style.transform = "";
   }
 
   if (draggingItem.value) {
     recursiveSplice(items.value, draggingItem.value.id, null, 1);
 
     if (isInserted.value === true) {
-      recursiveSplice(items.value, ghostItem.id, draggingItem.value, 1, 'INTO');
+      recursiveSplice(items.value, ghostItem.id, draggingItem.value, 1, "INTO");
       isInserted.value = false;
     } else {
       recursiveSplice(items.value, ghostItem.id, draggingItem.value, 1);
@@ -323,10 +336,10 @@ const pointerUpHandler = () => {
   removeAllGhostItems(items.value);
 
   if (currentTarget.value) {
-    currentTarget.value.style.top = '';
-    currentTarget.value.style.left = '';
-    currentTarget.value.style.width = '';
-    currentTarget.value.style.height = '';
+    currentTarget.value.style.top = "";
+    currentTarget.value.style.left = "";
+    currentTarget.value.style.width = "";
+    currentTarget.value.style.height = "";
   }
 
   draggingItem.value = null;
@@ -357,7 +370,8 @@ const hasItemBefore = (list: Item[], idToFind: ID): boolean => {
       }
       if (
         !list[index - 1].id ||
-        (String(list[index - 1].id) === String(ghostItem.id) && index - 1 === 0) ||
+        (String(list[index - 1].id) === String(ghostItem.id) &&
+          index - 1 === 0) ||
         String(list[index - 1].id) === String(idToFind)
       ) {
         return false;
@@ -399,14 +413,14 @@ const checkInsertion = () => {
   if (!currentTarget.value) {
     return;
   }
-  const draggingElement = currentTarget.value.querySelector('.dq-element');
+  const draggingElement = currentTarget.value.querySelector(".dq-element");
 
   if (!draggingElement) {
     return;
   }
 
   const draggingRect = draggingElement.getBoundingClientRect();
-  const ghostElement = document.querySelector('.dq-ghost-item') as HTMLElement;
+  const ghostElement = document.querySelector(".dq-ghost-item") as HTMLElement;
 
   if (!ghostElement) {
     return;
@@ -419,7 +433,7 @@ const checkInsertion = () => {
   }
 
   if (!hasItemBefore(items.value, draggingItem.value.id)) {
-    isInserted.value === false;
+    isInserted.value = false;
     return;
   }
 
@@ -432,7 +446,7 @@ const checkInsertion = () => {
     draggingRect.left > currentItemRect.left + 50
   ) {
     isInserted.value = true;
-    ghostElement.style.transform = 'translateX(20px)';
+    ghostElement.style.transform = "translateX(20px)";
   }
 
   if (
@@ -442,7 +456,7 @@ const checkInsertion = () => {
     draggingRect.left < currentItemRect.left - 20
   ) {
     isInserted.value = false;
-    ghostElement.style.transform = '';
+    ghostElement.style.transform = "";
   }
 };
 
@@ -470,7 +484,7 @@ const checkIntersection = () => {
     return;
   }
 
-  const draggingElement = currentTarget.value.querySelector('.dq-element');
+  const draggingElement = currentTarget.value.querySelector(".dq-element");
 
   if (!draggingElement) {
     return;
@@ -482,28 +496,51 @@ const checkIntersection = () => {
     const currentItemRect = currentItemElement.getBoundingClientRect();
 
     // TODO: Check this
-    if (currentItemElement.dataset.id === null || currentItemElement.dataset.id === undefined) {
+    if (
+      currentItemElement.dataset.id === null ||
+      currentItemElement.dataset.id === undefined
+    ) {
       continue;
     }
 
-    if (currentItemElement.dataset.id === draggingItem.value?.id || currentItemElement.dataset.id === 'ghost') {
+    if (
+      currentItemElement.dataset.id === draggingItem.value?.id ||
+      currentItemElement.dataset.id === "ghost"
+    ) {
       continue;
     }
 
-    if (draggingRect.top > currentItemRect.top && draggingRect.top < currentItemRect.bottom) {
+    if (
+      draggingRect.top > currentItemRect.top &&
+      draggingRect.top < currentItemRect.bottom
+    ) {
       isInserted.value = false;
-      const ghostElement = document.querySelector('.dq-ghost-item') as HTMLElement;
+      const ghostElement = document.querySelector(
+        ".dq-ghost-item"
+      ) as HTMLElement;
       if (ghostElement) {
-        ghostElement.style.transform = '';
+        ghostElement.style.transform = "";
       }
 
       const half = currentItemRect.bottom - currentItemRect.height / 2;
       recursiveSplice(items.value, ghostItem.id, null, 1);
 
       if (draggingRect.top <= half) {
-        recursiveSplice(items.value, currentItemElement.dataset.id, ghostItem, 0, 'ABOVE');
+        recursiveSplice(
+          items.value,
+          currentItemElement.dataset.id,
+          ghostItem,
+          0,
+          "ABOVE"
+        );
       } else {
-        recursiveSplice(items.value, currentItemElement.dataset.id, ghostItem, 0, 'BELOW');
+        recursiveSplice(
+          items.value,
+          currentItemElement.dataset.id,
+          ghostItem,
+          0,
+          "BELOW"
+        );
       }
       return;
     }
@@ -511,14 +548,14 @@ const checkIntersection = () => {
 };
 
 if (window) {
-  window.addEventListener('pointerup', pointerUpHandler);
-  window.addEventListener('pointermove', pointerMoveHandler);
+  window.addEventListener("pointerup", pointerUpHandler);
+  window.addEventListener("pointermove", pointerMoveHandler);
 }
 
 onUnmounted(() => {
   if (window) {
-    window.removeEventListener('pointerup', pointerMoveHandler);
-    window.removeEventListener('pointermove', pointerMoveHandler);
+    window.removeEventListener("pointerup", pointerMoveHandler);
+    window.removeEventListener("pointermove", pointerMoveHandler);
   }
 });
 
