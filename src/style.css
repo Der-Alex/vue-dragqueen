@@ -1,24 +1,16 @@
-:root {
-  --dq-indent: 1rem;
-  --dq-item-border: 1px dashed #ccc;
-  --dq-drag-color: rgba(109, 216, 109, 1);
-  --dq-ghost-color: rgba(247, 200, 200, 1);
-  --dq-drag-z-index: 1;
-}
-
 .dq-drag-item {
   box-sizing: border-box;
-  border: var(--dq-item-border);
+  border: var(--dq-item-border, 1px dashed #999);
 }
 
 .dq-drag-item .dq-drag-item {
-  margin-inline-start: var(--dq-indent);
+  margin-inline-start: var(--dq-indent, 1rem);
 }
 
 .dq-drag-item--drag {
   position: absolute;
-  background-color: var(--dq-drag-color);
-  z-index: var(--dq-drag-z-index);
+  background-color: var(--dq-drag-color, rgba(109, 216, 109, 1));
+  z-index: var(--dq-drag-z-index, 1);
 }
 
 .dq-element {
@@ -27,5 +19,5 @@
 }
 
 .dq-ghost-item {
-  background-color: var(--dq-ghost-color);
+  background-color: var(--dq-ghost-color, rgba(150, 150, 150, 1));
 }
