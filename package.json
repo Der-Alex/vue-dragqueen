@@ -26,11 +26,11 @@
     "vue": "^3.5.13"
   },
   "devDependencies": {
-    "@types/node": "^20.17.17",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "typescript": "^5.7.3",
+    "@types/node": "^20.17.46",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "typescript": "^5.8.3",
     "vite": "^5.4.19",
-    "vue-tsc": "^2.2.0"
+    "vue-tsc": "^2.2.10"
   },
   "packageManager": "pnpm@9.0.6+sha1.648f6014eb363abb36618f2ba59282a9eeb3e879"
 }
