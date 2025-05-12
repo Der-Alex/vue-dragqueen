@@ -19,5 +19,11 @@
 }
 
 .dq-ghost-item {
-  background-color: var(--dq-ghost-color, rgba(150, 150, 150, 1));
+  background-color: var(
+    --dq-ghost-color,
+    rgba(102, 51, 153, var(--dq-alpha, 1))
+  );
+  &.dq-old-item {
+    --dq-alpha: 0.5;
+  }
 }

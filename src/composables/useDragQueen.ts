@@ -38,7 +38,7 @@ type DropPosition = "ABOVE" | "BELOW" | "INTO";
 
 let animationFrameId: number | null = null;
 const items = ref<Item[]>([]);
-const backupItems = ref<Item[]>([]);
+const flatItems = ref<Map<string, Item>>();
 const isDragging = ref(false);
 const dragItems = ref<HTMLElement[]>([]);
 const draggingItem = ref<Item | null>(null);
@@ -64,6 +64,12 @@ const ghostItem: Item = {
   ghost: true,
 };
 
+const oldItem: Item = {
+  id: "oldItem",
+  children: [],
+  ghost: true,
+};
+
 /**
  * Recursively removes all ghost items from a nested list.
  *
@@ -80,7 +86,7 @@ const removeAllGhostItems = (list: Item[]) => {
   for (let i = list.length - 1; i >= 0; i--) {
     const item = list[i];
 
-    if (item.ghost && item.id === ghostItem.id) {
+    if (item.ghost) {
       list.splice(i, 1);
       continue;
     }
@@ -125,7 +131,12 @@ const recursiveSplice = (
             ? index + 1
             : index - 1;
         if (position === "INTO") {
-          list[realIndex].children.push(itemToReplace);
+          //list[realIndex].children.push(itemToReplace);
+          if (idToFind === "ghost") {
+            list[realIndex].children.unshift(itemToReplace);
+          } else {
+            item.children.unshift(itemToReplace);
+          }
           list.splice(index, deleteCount);
         } else {
           list.splice(realIndex, deleteCount, itemToReplace);
@@ -183,6 +194,22 @@ const recursiveFindIndex = (idtoFind: ID, list: Item[]): number => {
   return -1;
 };
 
+const flattenItemsToMap = (list: Item[]): Map<string, Item> => {
+  const map = new Map<string, Item>();
+
+  const traverse = (items: Item[]) => {
+    for (const item of items) {
+      map.set(String(item.id), item);
+      if (item.children && item.children.length > 0) {
+        traverse(item.children);
+      }
+    }
+  };
+
+  traverse(list);
+  return map;
+};
+
 /**
  * Handles the pointer down event on a draggable item.
  *
@@ -208,7 +235,8 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
     return;
   }
 
-  backupItems.value = [...items.value];
+  flatItems.value = flattenItemsToMap(items.value);
+
   currentTarget.value = evt.target as HTMLElement;
   dragItems.value = [
     ...(Array.from(document.querySelectorAll(".dq-element")) as HTMLElement[]),
@@ -227,6 +255,7 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
 
   if (draggingItem.value) {
     recursiveSplice(items.value, draggingItem.value?.id, ghostItem, 0);
+    recursiveSplice(items.value, draggingItem.value?.id, oldItem, 0);
   }
 
   isDragging.value = true;
@@ -500,13 +529,17 @@ const checkIntersection = () => {
       currentItemElement.dataset.id === null ||
       currentItemElement.dataset.id === undefined
     ) {
+      console.log("nulldefined");
       continue;
     }
 
     if (
       currentItemElement.dataset.id === draggingItem.value?.id ||
-      currentItemElement.dataset.id === "ghost"
+      currentItemElement.dataset.id === "ghost" ||
+      currentItemElement.dataset.id === "oldItem"
     ) {
+      console.log("bad item", currentItemElement.dataset.id);
+
       continue;
     }
 
@@ -514,7 +547,13 @@ const checkIntersection = () => {
       draggingRect.top > currentItemRect.top &&
       draggingRect.top < currentItemRect.bottom
     ) {
+      console.log("YUP");
+      enteredItem.value =
+        (flatItems.value?.get(currentItemElement.dataset.id) as Item | null) ||
+        null;
+
       isInserted.value = false;
+      removeAllGhostItems(items.value);
       const ghostElement = document.querySelector(
         ".dq-ghost-item"
       ) as HTMLElement;
@@ -534,13 +573,64 @@ const checkIntersection = () => {
           "ABOVE"
         );
       } else {
-        recursiveSplice(
-          items.value,
-          currentItemElement.dataset.id,
-          ghostItem,
-          0,
-          "BELOW"
-        );
+        if (enteredItem.value && enteredItem.value.children.length > 0) {
+          recursiveSplice(
+            items.value,
+            currentItemElement.dataset.id,
+            ghostItem,
+            0,
+            "INTO"
+          );
+        } else {
+          recursiveSplice(
+            items.value,
+            currentItemElement.dataset.id,
+            ghostItem,
+            0,
+            "BELOW"
+          );
+        }
+      }
+      return;
+    }
+
+    if (!flatItems.value) return;
+
+    let lastItemId = Array.from(flatItems.value.values()).pop()?.id;
+
+    if (currentItemElement.dataset.id === String(lastItemId)) {
+      console.log("ASDASD", lastItemId);
+
+      const lastItem = dragItems.value.find(
+        (item) => item.dataset.id === String(lastItemId)
+      );
+
+      if (!lastItem) {
+        console.log("no last item");
+        return;
+      }
+      if (!lastItem.parentElement) {
+        console.log("no parent");
+        return;
+      }
+
+      if (
+        draggingRect.top > lastItem.parentElement.getBoundingClientRect().bottom
+      ) {
+        console.log("now we here");
+        removeAllGhostItems(items.value);
+
+        const idToFind = items.value[items.value.length - 1].id;
+
+        isInserted.value = false;
+        const ghostElement = document.querySelector(
+          ".dq-ghost-item"
+        ) as HTMLElement;
+        if (ghostElement) {
+          ghostElement.style.transform = "";
+        }
+
+        recursiveSplice(items.value, String(idToFind), ghostItem, 0, "BELOW");
       }
       return;
     }
