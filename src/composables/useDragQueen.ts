@@ -40,7 +40,7 @@ let animationFrameId: number | null = null;
 const items = ref<Item[]>([]);
 const flatItems = ref<Map<string, Item>>();
 const isDragging = ref(false);
-const dragItems = ref<HTMLElement[]>([]);
+const dragElements = ref<HTMLElement[]>([]);
 const draggingItem = ref<Item | null>(null);
 const enteredItem = ref<Item | null>(null);
 const lastDraggedItem = ref<Item | null>(null);
@@ -123,6 +123,16 @@ const recursiveSplice = (
   deleteCount: number,
   position: DropPosition = "ABOVE"
 ): boolean => {
+  // console.log(
+  //   "recursive splice",
+  //   idToFind,
+  //   itemToReplace?.id,
+  //   deleteCount,
+  //   position
+  // );
+  if (itemToReplace && String(idToFind) === String(itemToReplace.id)) {
+    false;
+  }
   for (let [index, item] of list.entries()) {
     if (String(item.id) === String(idToFind)) {
       if (itemToReplace !== null) {
@@ -133,12 +143,12 @@ const recursiveSplice = (
             ? index + 1
             : index - 1;
         if (position === "INTO") {
-          //list[realIndex].children.push(itemToReplace);
           if (idToFind === "ghost") {
             list[realIndex].children.unshift(itemToReplace);
           } else {
             item.children.unshift(itemToReplace);
           }
+
           list.splice(index, deleteCount);
         } else {
           list.splice(realIndex, deleteCount, itemToReplace);
@@ -196,6 +206,23 @@ const recursiveFindIndex = (idtoFind: ID, list: Item[]): number => {
   return -1;
 };
 
+const findItemAndIndex = (
+  items: Item[],
+  searchId: ID
+): { item: Item; index: number } | null => {
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    if (item.id === searchId) {
+      return { item, index: i };
+    }
+    const childResult = findItemAndIndex(item.children, searchId);
+    if (childResult) {
+      return childResult;
+    }
+  }
+  return null;
+};
+
 const flattenItemsToMap = (list: Item[]): Map<string, Item> => {
   const map = new Map<string, Item>();
 
@@ -240,7 +267,7 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
   flatItems.value = flattenItemsToMap(items.value);
 
   currentTarget.value = evt.target as HTMLElement;
-  dragItems.value = [
+  dragElements.value = [
     ...(Array.from(document.querySelectorAll(".dq-element")) as HTMLElement[]),
   ];
   document.body.style.userSelect = "none";
@@ -451,7 +478,9 @@ const checkInsertion = () => {
   }
 
   const draggingRect = draggingElement.getBoundingClientRect();
-  const ghostElement = document.querySelector(".dq-ghost-item") as HTMLElement;
+  const ghostElement = document.querySelector(
+    ".dq-ghost-item:not(.dq-old-item)"
+  ) as HTMLElement;
 
   if (!ghostElement) {
     return;
@@ -508,22 +537,66 @@ const checkInsertion = () => {
  */
 const checkIntersection = () => {
   if (!draggingItem.value) {
+    console.log("no dragging item");
+    return;
+  }
+
+  if (!flatItems.value) {
+    console.log("no flatitems");
     return;
   }
 
   if (!currentTarget.value) {
+    console.log("no current target");
     return;
   }
 
   const draggingElement = currentTarget.value.querySelector(".dq-element");
 
   if (!draggingElement) {
+    console.log("no dragging element");
     return;
   }
 
   const draggingRect = draggingElement.getBoundingClientRect();
 
-  for (const currentItemElement of dragItems.value) {
+  const itemsWithoutGhosts = items.value.filter((item) => !item.ghost);
+
+  let topElem = dragElements.value.find(
+    (elem) => elem.dataset.id === String(itemsWithoutGhosts[0].id)
+  );
+
+  if (!topElem) {
+    console.log("no top element");
+    return;
+  }
+
+  topElem = topElem.parentElement || undefined;
+
+  if (!topElem) {
+    console.log("no top element parent");
+    return;
+  }
+
+  let bottomElem = dragElements.value.find(
+    (elem) =>
+      elem.dataset.id ===
+      String(itemsWithoutGhosts[itemsWithoutGhosts.length - 1].id)
+  );
+
+  if (!bottomElem) {
+    console.log("no bottom element");
+    return;
+  }
+
+  bottomElem = bottomElem.parentElement || undefined;
+
+  if (!bottomElem) {
+    console.log("no bottom element parent");
+    return;
+  }
+
+  for (const currentItemElement of dragElements.value) {
     const currentItemRect = currentItemElement.getBoundingClientRect();
 
     // TODO: Check this
@@ -536,12 +609,11 @@ const checkIntersection = () => {
     }
 
     if (
-      currentItemElement.dataset.id === draggingItem.value?.id ||
+      currentItemElement.dataset.id === String(draggingItem.value?.id) ||
       currentItemElement.dataset.id === "ghost" ||
       currentItemElement.dataset.id === "oldItem"
     ) {
-      console.log("bad item", currentItemElement.dataset.id);
-
+      // console.log("bad item", currentItemElement.dataset.id);
       continue;
     }
 
@@ -549,22 +621,12 @@ const checkIntersection = () => {
       draggingRect.top > currentItemRect.top &&
       draggingRect.top < currentItemRect.bottom
     ) {
-      console.log("YUP");
       enteredItem.value =
         (flatItems.value?.get(currentItemElement.dataset.id) as Item | null) ||
         null;
 
-      isInserted.value = false;
-      removeAllGhostItems(items.value);
-      const ghostElement = document.querySelector(
-        ".dq-ghost-item"
-      ) as HTMLElement;
-      if (ghostElement) {
-        ghostElement.style.transform = "";
-      }
-
       const half = currentItemRect.bottom - currentItemRect.height / 2;
-      recursiveSplice(items.value, ghostItem.id, null, 1);
+      recursiveSplice(items.value, ghostItem.id, null, 1); // remove ghost item
 
       if (draggingRect.top <= half) {
         recursiveSplice(
@@ -574,66 +636,50 @@ const checkIntersection = () => {
           0,
           "ABOVE"
         );
+      } else if (enteredItem.value && enteredItem.value.children.length > 0) {
+        recursiveSplice(
+          items.value,
+          currentItemElement.dataset.id,
+          ghostItem,
+          0,
+          "INTO"
+        );
       } else {
-        if (enteredItem.value && enteredItem.value.children.length > 0) {
-          recursiveSplice(
-            items.value,
-            currentItemElement.dataset.id,
-            ghostItem,
-            0,
-            "INTO"
-          );
-        } else {
-          recursiveSplice(
-            items.value,
-            currentItemElement.dataset.id,
-            ghostItem,
-            0,
-            "BELOW"
-          );
-        }
+        recursiveSplice(
+          items.value,
+          currentItemElement.dataset.id,
+          ghostItem,
+          0,
+          "BELOW"
+        );
       }
       return;
     }
 
-    if (!flatItems.value) return;
+    if (
+      draggingElement.getBoundingClientRect().top <
+      topElem.getBoundingClientRect().top - 10
+    ) {
+      return;
+    }
 
-    let lastItemId = Array.from(flatItems.value.values()).pop()?.id;
+    if (
+      draggingElement.getBoundingClientRect().top >
+      bottomElem.getBoundingClientRect().bottom + 10
+    ) {
+      recursiveSplice(items.value, ghostItem.id, null, 1); // remove ghost item
 
-    if (currentItemElement.dataset.id === String(lastItemId)) {
-      console.log("ASDASD", lastItemId);
+      const bottomChild = bottomElem.querySelector(
+        ".dq-element"
+      ) as HTMLElement;
 
-      const lastItem = dragItems.value.find(
-        (item) => item.dataset.id === String(lastItemId)
+      recursiveSplice(
+        items.value,
+        String(bottomChild.dataset.id),
+        ghostItem,
+        0,
+        "BELOW"
       );
-
-      if (!lastItem) {
-        console.log("no last item");
-        return;
-      }
-      if (!lastItem.parentElement) {
-        console.log("no parent");
-        return;
-      }
-
-      if (
-        draggingRect.top > lastItem.parentElement.getBoundingClientRect().bottom
-      ) {
-        console.log("now we here");
-        removeAllGhostItems(items.value);
-
-        const idToFind = items.value[items.value.length - 1].id;
-
-        isInserted.value = false;
-        const ghostElement = document.querySelector(
-          ".dq-ghost-item"
-        ) as HTMLElement;
-        if (ghostElement) {
-          ghostElement.style.transform = "";
-        }
-
-        recursiveSplice(items.value, String(idToFind), ghostItem, 0, "BELOW");
-      }
       return;
     }
   }
