@@ -82,17 +82,19 @@ const oldItem: Item = {
  * - Checks if an item is a ghost and matches the `ghostItem.id`, then removes it.
  * - Recursively processes child items to ensure all ghost items are removed.
  */
-const removeAllGhostItems = (list: Item[]) => {
+const removeAllGhostItems = (list: Item[], oldItem = false) => {
   for (let i = list.length - 1; i >= 0; i--) {
     const item = list[i];
 
     if (item.ghost) {
+      if (!oldItem && item.id === "oldItem") continue;
+
       list.splice(i, 1);
       continue;
     }
 
     if (item.children && item.children.length) {
-      removeAllGhostItems(item.children);
+      removeAllGhostItems(item.children, oldItem);
     }
   }
 };
@@ -362,7 +364,7 @@ const pointerUpHandler = () => {
     }
   }
 
-  removeAllGhostItems(items.value);
+  removeAllGhostItems(items.value, true);
 
   if (currentTarget.value) {
     currentTarget.value.style.top = "";
