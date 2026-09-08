@@ -1,25 +1,24 @@
 <script setup lang="ts">
-import { defineProps } from "vue";
 import { useDragQueen, type Item } from "@/composables/useDragQueen";
 import GhostItem from "./GhostItem.vue";
 
 defineProps({
   classes: {
     type: String,
-    default: "",
+    default: ""
   },
   item: {
     type: Object as () => Item,
-    required: true,
+    required: true
   },
   index: {
     type: Number,
-    required: true,
+    required: true
   },
   transitionGroupName: {
     type: String,
-    default: "none",
-  },
+    default: "none"
+  }
 });
 
 defineSlots<{
@@ -45,8 +44,8 @@ const onPointerDown = (evt: PointerEvent, item: Item) => {
     :class="[
       classes,
       {
-        'dq-drag-item--drag': draggingItem?.id === item.id,
-      },
+        'dq-drag-item--drag': draggingItem?.id === item.id
+      }
     ]"
     @pointerdown="(evt: PointerEvent) => onPointerDown(evt, item)"
   >

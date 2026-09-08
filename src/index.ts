@@ -1,6 +1,6 @@
-import DragItem from './components/DragItem.vue';
-import GhostItem from './components/GhostItem.vue';
-import { useDragQueen } from './composables/useDragQueen';
-import './style.css';
+import DragItem from "./components/DragItem.vue";
+import GhostItem from "./components/GhostItem.vue";
+import { useDragQueen, type Item } from "./composables/useDragQueen";
+import "./style.css";
 
-export { DragItem, GhostItem, useDragQueen };
+export { DragItem, GhostItem, type Item, useDragQueen };

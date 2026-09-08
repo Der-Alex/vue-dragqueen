@@ -6,13 +6,13 @@
   "files": [
     "dist"
   ],
-  "main": "./dist/vue-dragqueen.umd.cjs",
-  "module": "./dist/vue-dragqueen.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/vue-dragqueen.js",
-      "require": "./dist/vue-dragqueen.umd.cjs",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
     },
     "./style.css": "./dist/style.css"
   },
@@ -23,19 +23,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "vue": "^3.5.14"
+    "vue": "^3.5.42"
   },
   "devDependencies": {
-    "@types/node": "^20.17.47",
-    "@vitejs/plugin-vue": "^5.2.4",
-    "typescript": "^5.8.3",
-    "vite": "^5.4.19",
-    "vue-tsc": "^2.2.10"
+    "@microsoft/api-extractor": "^7.59.0",
+    "@types/node": "^24.13.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "typescript": "^6.0.3",
+    "unplugin-dts": "^1.1.0",
+    "vite": "^8.2.2",
+    "vue-tsc": "^3.3.11"
   },
-  "packageManager": "pnpm@9.0.6+sha1.648f6014eb363abb36618f2ba59282a9eeb3e879",
-  "pnpm": {
-    "overrides": {
-      "esbuild@<=0.24.2": ">=0.25.0"
-    }
-  }
+  "packageManager": "pnpm@12.3.4"
 }

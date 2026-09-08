@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { defineProps } from "vue";
 import { useDragQueen, type Item } from "@/composables/useDragQueen";
 
 const { itemSize } = useDragQueen();

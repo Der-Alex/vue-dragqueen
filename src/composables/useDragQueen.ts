@@ -8,20 +8,8 @@
 
 import { ref, onUnmounted } from "vue";
 
-/**
- * Represents the type of an item's ID. It is either a string or a number.
- */
 export type ID = string | number;
 
-/**
- * Represents an item in the tree structure.
- *
- * @typedef {Object} Item
- * @property {ID} id - The unique identifier of the item.
- * @property {Item[]} children - The child items of this item.
- * @property {boolean} [ghost] - Indicates if the item is a ghost (optional).
- * @property {any} [key] - Additional properties of the item.
- */
 export type Item = {
   id: ID;
   children: Item[];
@@ -29,11 +17,6 @@ export type Item = {
   ghost?: boolean;
 };
 
-/**
- * Defines possible drop positions when inserting or moving an item.
- *
- * @typedef {'ABOVE' | 'BELOW' | 'INTO'} DropPosition
- */
 type DropPosition = "ABOVE" | "BELOW" | "INTO";
 
 let animationFrameId: number | null = null;
@@ -55,19 +38,19 @@ const isInserted = ref(false);
 
 const itemSize = ref<{ width: number; height: number }>({
   width: 0,
-  height: 0,
+  height: 0
 });
 
 const ghostItem: Item = {
   id: "ghost",
   children: [],
-  ghost: true,
+  ghost: true
 };
 
 const oldItem: Item = {
   id: "oldItem",
   children: [],
-  ghost: true,
+  ghost: true
 };
 
 /**
@@ -82,7 +65,7 @@ const oldItem: Item = {
  * - Checks if an item is a ghost and matches the `ghostItem.id`, then removes it.
  * - Recursively processes child items to ensure all ghost items are removed.
  */
-const removeAllGhostItems = (list: Item[], oldItem = false) => {
+const removeAllGhostItems = (list: Item[], oldItem = false): void => {
   for (let i = list.length - 1; i >= 0; i--) {
     const item = list[i];
 
@@ -140,8 +123,8 @@ const recursiveSplice = (
           position === "ABOVE"
             ? index
             : position === "BELOW"
-            ? index + 1
-            : index - 1;
+              ? index + 1
+              : index - 1;
         if (position === "INTO") {
           if (idToFind === "ghost") {
             list[realIndex].children.unshift(itemToReplace);
@@ -190,14 +173,14 @@ const recursiveSplice = (
  * - If the item has children, recursively searches within them.
  * - Returns `-1` if the item is not found in the list or any of its child lists.
  */
-const recursiveFindIndex = (idtoFind: ID, list: Item[]): number => {
+const recursiveFindIndex = (idToFind: ID, list: Item[]): number => {
   for (const [index, item] of list.entries()) {
-    if (String(item.id) === String(idtoFind)) {
+    if (String(item.id) === String(idToFind)) {
       return index;
     }
 
     if (item.children && item.children.length > 0) {
-      const childIndex = recursiveFindIndex(idtoFind, item.children);
+      const childIndex = recursiveFindIndex(idToFind, item.children);
       if (childIndex !== -1) {
         return childIndex;
       }
@@ -258,7 +241,7 @@ const flattenItemsToMap = (list: Item[]): Map<string, Item> => {
  * - Records the initial click position relative to the item.
  * - Positions the dragged element based on pointer coordinates.
  */
-const pointerDownHandler = (evt: PointerEvent, item: Item) => {
+const pointerDownHandler = (evt: PointerEvent, item: Item): void => {
   if (!window || !document || !document.body) {
     // TODO: check how to deal with stuff like that
     return;
@@ -268,7 +251,7 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
 
   currentTarget.value = evt.target as HTMLElement;
   dragElements.value = [
-    ...(Array.from(document.querySelectorAll(".dq-element")) as HTMLElement[]),
+    ...(Array.from(document.querySelectorAll(".dq-element")) as HTMLElement[])
   ];
   document.body.style.userSelect = "none";
 
@@ -323,7 +306,7 @@ const pointerDownHandler = (evt: PointerEvent, item: Item) => {
  * - Calculates the new position of the dragged item and updates its style.
  * - Calls `checkIntersection` and `checkInsertion` to manage drag interactions.
  */
-const pointerMoveHandler = (evt: PointerEvent) => {
+const pointerMoveHandler = (evt: PointerEvent): void => {
   if (!window || !document || !document.body) {
     // TODO: check how to deal with stuff like that
     return;
@@ -366,7 +349,7 @@ const pointerMoveHandler = (evt: PointerEvent) => {
  * - Resets styles of the dragged element to remove positioning constraints.
  * - Clears relevant state variables to indicate the drag operation is complete.
  */
-const pointerUpHandler = () => {
+const pointerUpHandler = (): void => {
   if (!window || !document || !document.body) {
     // TODO: check how to deal with stuff like that
     return;
@@ -463,7 +446,7 @@ const hasItemBefore = (list: Item[], idToFind: ID): boolean => {
  * - Adjusts the ghost item's position visually if an insertion condition is met.
  * - Toggles the insertion state and updates the ghost element’s transform style accordingly.
  */
-const checkInsertion = () => {
+const checkInsertion = (): void => {
   if (!draggingItem.value) {
     return;
   }
@@ -535,7 +518,7 @@ const checkInsertion = () => {
  * - Calculates the midpoint of the target item to determine whether to insert above or below.
  * - Calls `recursiveSplice` to insert the ghost item accordingly.
  */
-const checkIntersection = () => {
+const checkIntersection = (): void => {
   if (!draggingItem.value) {
     console.log("no dragging item");
     return;
@@ -699,19 +682,6 @@ onUnmounted(() => {
 
 /**
  * Provides drag-and-drop functionality for handling tree-structured items.
- *
- * @returns {Object} The composable's reactive state and event handlers.
- *
- * @property {Ref<Item | null>} draggingItem - The item currently being dragged.
- * @property {Ref<Item | null>} enteredItem - The item currently being hovered over.
- * @property {Ref<Item[]>} items - The list of draggable items.
- * @property {Ref<Item | null>} lastDraggedItem - The last dragged item.
- * @property {Ref<{ width: number, height: number }>} itemSize - The dimensions of the dragged item.
- * @property {Function} pointerDownHandler - Handles the pointer down event to initiate dragging.
- * @property {Function} pointerMoveHandler - Handles pointer movement while dragging.
- * @property {Function} pointerUpHandler - Handles pointer release to finalize dragging.
- * @property {Function} setDebug - Enables or disables debugging mode.
- * @property {Ref<boolean>} ghost - Indicates if a ghost item is currently active.
  */
 export const useDragQueen = () => {
   /**
@@ -720,7 +690,7 @@ export const useDragQueen = () => {
    *
    * @returns {void}
    */
-  const setDebug = (activate: boolean) => {
+  const setDebug = (activate: boolean): void => {
     debug.value = activate;
   };
 
@@ -734,6 +704,6 @@ export const useDragQueen = () => {
     pointerMoveHandler,
     pointerUpHandler,
     setDebug,
-    ghost,
+    ghost
   };
 };
